@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { addOrder } from '@/services/api';
+import { Order } from '@/types/Product';
 import { 
   Table, 
   TableBody, 
@@ -83,9 +84,10 @@ const Cart = () => {
     }
     
     try {
-      const newOrder = {
+      // Fix: Explicitly type the status as one of the allowed order status values
+      const newOrder: Omit<Order, 'id'> = {
         date: new Date().toISOString(),
-        status: 'pending',
+        status: 'pending' as const, // Using 'as const' to ensure TypeScript treats this as a literal type
         items: [...items],
         total: totalPrice,
         shippingAddress: values
