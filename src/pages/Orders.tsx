@@ -1,8 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { getUserOrders, addOrder } from '@/services/api';
-import { useCart } from '@/contexts/CartContext';
-import { Button } from '@/components/ui/button';
+import { getUserOrders } from '@/services/api';
 import { 
   Table, 
   TableBody, 
@@ -26,21 +23,21 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { 
   Download, 
   ClipboardList, 
   ShoppingCart,
-  Plus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Order } from '@/types/Product';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  
-  const { items, totalPrice, clearCart } = useCart();
+  const navigate = useNavigate();
   
   useEffect(() => {
     // Load orders from localStorage
@@ -50,38 +47,6 @@ const Orders = () => {
   
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
-  };
-  
-  const handleCreateOrder = () => {
-    if (items.length === 0) {
-      toast.error('Your cart is empty');
-      return;
-    }
-    
-    try {
-      const newOrder: Omit<Order, 'id'> = {
-        date: new Date().toISOString(),
-        status: 'pending',
-        items: [...items],
-        total: totalPrice,
-        shippingAddress: {
-          name: 'John Doe',
-          street: '123 Main St',
-          city: 'Anytown',
-          state: 'CA',
-          zip: '90210',
-          country: 'USA',
-        }
-      };
-      
-      const order = addOrder(newOrder);
-      setOrders(prev => [order, ...prev]);
-      clearCart();
-      toast.success('Order created successfully');
-    } catch (error) {
-      toast.error('Failed to create order');
-      console.error(error);
-    }
   };
   
   const handleDownloadReport = (order: Order) => {
@@ -129,17 +94,10 @@ const Orders = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Orders</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Your Orders</h2>
           <p className="text-muted-foreground">
-            View and manage your orders
+            View and track your order history
           </p>
-        </div>
-        
-        <div className="flex items-center gap-2 self-end">
-          <Button variant="outline" onClick={handleCreateOrder}>
-            <Plus className="h-4 w-4 mr-2" />
-            Place Order from Cart
-          </Button>
         </div>
       </div>
       
@@ -153,13 +111,18 @@ const Orders = () => {
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center p-8">
             <ClipboardList className="h-16 w-16 text-muted-foreground mb-4" />
-            <p className="text-center text-muted-foreground">
-              Start by adding products to your cart and creating an order
+            <p className="text-center text-muted-foreground mb-6">
+              Start by adding products to your cart and completing a purchase
             </p>
-            <Button className="mt-6">
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Browse Products
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => navigate('/products')}>
+                Browse Products
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/cart')}>
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                View Cart
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -167,7 +130,7 @@ const Orders = () => {
           <CardHeader>
             <CardTitle>Order History</CardTitle>
             <CardDescription>
-              You have {orders.length} orders in total
+              You have {orders.length} order{orders.length !== 1 ? 's' : ''} in total
             </CardDescription>
           </CardHeader>
           <CardContent>
