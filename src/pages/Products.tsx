@@ -32,9 +32,9 @@ import {
 
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
-  const [sortOrder, setSortOrder] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<string>('default');
   
   const { addToCart } = useCart();
   
@@ -54,7 +54,7 @@ const Products = () => {
   const filteredProducts = products
     .filter(product => 
       (searchTerm === '' || product.title.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (selectedCategory === '' || product.category === selectedCategory) &&
+      (selectedCategory === 'all' || product.category === selectedCategory) &&
       (product.price >= priceRange[0] && product.price <= priceRange[1])
     )
     .sort((a, b) => {
@@ -134,7 +134,7 @@ const Products = () => {
                       <SelectValue placeholder="All Categories" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Categories</SelectItem>
+                      <SelectItem value="all">All Categories</SelectItem>
                       {categories.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category.charAt(0).toUpperCase() + category.slice(1)}
@@ -156,7 +156,7 @@ const Products = () => {
                       <SelectValue placeholder="Default" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Default</SelectItem>
+                      <SelectItem value="default">Default</SelectItem>
                       <SelectItem value="price-asc">Price: Low to High</SelectItem>
                       <SelectItem value="price-desc">Price: High to Low</SelectItem>
                       <SelectItem value="name-asc">Name: A to Z</SelectItem>
@@ -181,9 +181,9 @@ const Products = () => {
               <Button 
                 className="w-full"
                 onClick={() => {
-                  setSelectedCategory('');
+                  setSelectedCategory('all');
                   setPriceRange([0, 1000]);
-                  setSortOrder('');
+                  setSortOrder('default');
                 }}
               >
                 Reset Filters
