@@ -9,8 +9,8 @@ interface LogoProps {
 
 const Logo: React.FC<LogoProps> = ({ className = '' }) => {
   return (
-    <Link to="/dashboard" className={`flex items-center gap-2 ${className}`}>
-      <ShoppingCart className="h-6 w-6 text-brand-red" />
+    <Link to="/dashboard" className={`flex items-center gap-3 ${className}`}>
+      <ShoppingCart className="h-7 w-7 text-brand-red" />
       <span className="font-bold text-xl text-brand-red">ShopperHub</span>
     </Link>
   );

@@ -17,12 +17,14 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, href, isActive =
     <Link
       to={href}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all hover:bg-sidebar-accent",
+        "flex items-center gap-4 rounded-md px-4 py-3 text-base transition-all hover:bg-sidebar-accent",
         isActive ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground" : "text-sidebar-foreground"
       )}
     >
-      {icon}
-      <span>{label}</span>
+      <div className="flex items-center justify-center h-8 w-8">
+        {icon}
+      </div>
+      <span className="font-medium">{label}</span>
     </Link>
   );
 };
@@ -33,39 +35,39 @@ const DashboardSidebar = () => {
   
   const navItems = [
     {
-      icon: <LayoutDashboard className="h-4 w-4" />,
+      icon: <LayoutDashboard className="h-5 w-5" />,
       label: "Dashboard",
       href: "/dashboard",
     },
     {
-      icon: <ShoppingCart className="h-4 w-4" />,
+      icon: <ShoppingCart className="h-5 w-5" />,
       label: "Products",
       href: "/products",
     },
     {
-      icon: <ListOrdered className="h-4 w-4" />,
+      icon: <ListOrdered className="h-5 w-5" />,
       label: "Orders",
       href: "/orders",
     },
     {
-      icon: <BarChart className="h-4 w-4" />,
+      icon: <BarChart className="h-5 w-5" />,
       label: "Reports",
       href: "/reports",
     },
     {
-      icon: <Settings className="h-4 w-4" />,
+      icon: <Settings className="h-5 w-5" />,
       label: "Settings",
       href: "/settings",
     },
   ];
   
   return (
-    <div className="hidden lg:flex h-screen w-64 flex-col bg-sidebar fixed inset-y-0 border-r border-sidebar-border">
-      <div className="flex h-14 items-center border-b border-sidebar-border px-4">
-        <Logo />
+    <div className="hidden lg:flex h-screen w-72 flex-col bg-sidebar fixed inset-y-0 border-r border-sidebar-border">
+      <div className="flex h-20 items-center border-b border-sidebar-border px-6">
+        <Logo className="scale-110" />
       </div>
-      <div className="flex-1 overflow-auto py-2">
-        <nav className="grid items-start px-2 text-sm">
+      <div className="flex-1 overflow-auto py-6">
+        <nav className="grid gap-2 items-start px-4 text-sm">
           {navItems.map((item, index) => (
             <SidebarItem
               key={index}
@@ -77,15 +79,15 @@ const DashboardSidebar = () => {
           ))}
         </nav>
       </div>
-      <div className="mt-auto border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-            <span className="text-xs font-medium">
+      <div className="mt-auto border-t border-sidebar-border p-6">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-full bg-brand-pink flex items-center justify-center">
+            <span className="text-md font-semibold text-brand-red">
               {user?.name?.[0]?.toUpperCase() || "U"}
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-medium">{user?.name || "User"}</span>
+            <span className="text-sm font-semibold">{user?.name || "User"}</span>
             <span className="text-xs text-muted-foreground">{user?.email || "user@example.com"}</span>
           </div>
         </div>
