@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
-import { getUserOrders } from '@/services/api';
-import { Button } from '@/components/ui/button';
+
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -28,330 +27,142 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
 } from 'recharts';
-import { Download, FileText, FileIcon, FileX2 } from 'lucide-react';
-import { Order } from '@/types/Product';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Download, LineChart as LineChartIcon, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import jsPDF from 'jspdf';
-import { 
-  Menubar,
-  MenubarMenu,
-  MenubarTrigger,
-  MenubarContent,
-  MenubarItem,
-} from '@/components/ui/menubar';
 
 const Reports = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [timeRange, setTimeRange] = useState('all');
-  const [reportType, setReportType] = useState('sales');
+  const [timeRange, setTimeRange] = useState('month');
+  const [activeTab, setActiveTab] = useState('spending');
   
-  useEffect(() => {
-    const userOrders = getUserOrders();
-    setOrders(userOrders);
-  }, []);
-  
-  const getFilteredOrders = () => {
-    if (timeRange === 'all') {
-      return orders;
-    }
-    
-    const now = new Date();
-    let cutoff = new Date();
-    
-    switch (timeRange) {
-      case 'week':
-        cutoff.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        cutoff.setMonth(now.getMonth() - 1);
-        break;
-      case '6month':
-        cutoff.setMonth(now.getMonth() - 6);
-        break;
-      case 'year':
-        cutoff.setFullYear(now.getFullYear() - 1);
-        break;
-    }
-    
-    return orders.filter(order => new Date(order.date) >= cutoff);
+  // Sample spending history data
+  const spendingData = {
+    week: [
+      { day: 'Mon', amount: 45 },
+      { day: 'Tue', amount: 0 },
+      { day: 'Wed', amount: 123 },
+      { day: 'Thu', amount: 0 },
+      { day: 'Fri', amount: 75 },
+      { day: 'Sat', amount: 25 },
+      { day: 'Sun', amount: 0 },
+    ],
+    month: [
+      { day: 'Week 1', amount: 243 },
+      { day: 'Week 2', amount: 175 },
+      { day: 'Week 3', amount: 98 },
+      { day: 'Week 4', amount: 320 },
+    ],
+    year: [
+      { month: 'Jan', amount: 320 },
+      { month: 'Feb', amount: 450 },
+      { month: 'Mar', amount: 280 },
+      { month: 'Apr', amount: 390 },
+      { month: 'May', amount: 420 },
+      { month: 'Jun', amount: 560 },
+      { month: 'Jul', amount: 310 },
+      { month: 'Aug', amount: 480 },
+      { month: 'Sep', amount: 620 },
+      { month: 'Oct', amount: 350 },
+      { month: 'Nov', amount: 490 },
+      { month: 'Dec', amount: 780 },
+    ]
   };
   
-  const generateReportData = () => {
-    const filteredOrders = getFilteredOrders();
-    
-    if (reportType === 'sales') {
-      const salesByMonth: { [key: string]: number } = {};
-      
-      filteredOrders.forEach(order => {
-        const date = new Date(order.date);
-        const monthYear = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
-        
-        if (salesByMonth[monthYear]) {
-          salesByMonth[monthYear] += order.total;
-        } else {
-          salesByMonth[monthYear] = order.total;
-        }
-      });
-      
-      return Object.entries(salesByMonth).map(([month, sales]) => ({
-        month,
-        sales,
-      }));
-    }
-    
-    if (reportType === 'products') {
-      const productCounts: { [key: string]: number } = {};
-      
-      filteredOrders.forEach(order => {
-        order.items.forEach(item => {
-          if (productCounts[item.title]) {
-            productCounts[item.title] += item.quantity;
-          } else {
-            productCounts[item.title] = item.quantity;
-          }
-        });
-      });
-      
-      return Object.entries(productCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([name, value]) => ({ name, value }));
-    }
-    
-    if (reportType === 'categories') {
-      const categoryTotals: { [key: string]: number } = {};
-      
-      filteredOrders.forEach(order => {
-        order.items.forEach(item => {
-          if (categoryTotals[item.category]) {
-            categoryTotals[item.category] += item.price * item.quantity;
-          } else {
-            categoryTotals[item.category] = item.price * item.quantity;
-          }
-        });
-      });
-      
-      return Object.entries(categoryTotals).map(([name, value]) => ({
-        name,
-        value,
-      }));
-    }
-    
-    return [];
-  };
+  // Sample category spending data
+  const categoryData = [
+    { name: "Electronics", value: 1250 },
+    { name: "Clothing", value: 870 },
+    { name: "Home & Kitchen", value: 540 },
+    { name: "Books", value: 320 },
+    { name: "Beauty", value: 210 },
+  ];
   
-  const reportData = generateReportData();
+  // Sample product frequency data
+  const productData = [
+    { name: "Smartphone", count: 3 },
+    { name: "Laptop", count: 1 },
+    { name: "Headphones", count: 2 },
+    { name: "T-shirts", count: 5 },
+    { name: "Cookware Set", count: 1 },
+  ];
   
-  const handleDownloadReport = (format: 'csv' | 'pdf') => {
-    if (format === 'csv') {
-      let csvContent = 'data:text/csv;charset=utf-8,';
-      
-      if (reportType === 'sales') {
-        csvContent += 'Month,Sales\n';
-        reportData.forEach((data) => {
-          if ('month' in data && 'sales' in data) {
-            csvContent += `${data.month},${data.sales.toFixed(2)}\n`;
-          }
-        });
-      } else if (reportType === 'products') {
-        csvContent += 'Product,Quantity\n';
-        reportData.forEach((data) => {
-          if ('name' in data && 'value' in data) {
-            csvContent += `"${data.name}",${data.value}\n`;
-          }
-        });
-      } else if (reportType === 'categories') {
-        csvContent += 'Category,Sales\n';
-        reportData.forEach((data) => {
-          if ('name' in data && 'value' in data) {
-            csvContent += `"${data.name}",${data.value.toFixed(2)}\n`;
-          }
-        });
-      }
-      
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
-      link.setAttribute('download', `${reportType}-report.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast.success('CSV Report downloaded successfully');
-    } else if (format === 'pdf') {
-      const pdf = new jsPDF();
-      
-      const title = `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`;
-      pdf.setFontSize(18);
-      pdf.text(title, 20, 20);
-      pdf.setFontSize(12);
-      pdf.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
-      
-      pdf.setFontSize(10);
-      
-      if (reportType === 'sales') {
-        const headers = ['Month', 'Sales ($)'];
-        const rows = reportData.map(data => {
-          if ('month' in data && 'sales' in data) {
-            return [data.month, data.sales.toFixed(2)];
-          }
-          return ['', ''];
-        }).filter(row => row[0] !== '');
-        
-        const totalSales = reportData.reduce((sum, item) => {
-          if ('sales' in item) {
-            return sum + item.sales;
-          }
-          return sum;
-        }, 0);
-        rows.push(['TOTAL', totalSales.toFixed(2)]);
-        
-        pdf.setFontSize(12);
-        pdf.text('Sales Summary', 20, 40);
-        pdf.setFontSize(10);
-        
-        let y = 50;
-        pdf.text(headers[0], 20, y);
-        pdf.text(headers[1], 80, y);
-        y += 5;
-        pdf.line(20, y, 120, y);
-        y += 10;
-        
-        rows.forEach((row, i) => {
-          const isTotal = i === rows.length - 1;
-          if (isTotal) {
-            y += 5;
-            pdf.line(20, y - 7, 120, y - 7);
-            pdf.setFont("helvetica", "bold");
-          }
-          
-          pdf.text(row[0], 20, y);
-          pdf.text(row[1], 80, y);
-          
-          if (isTotal) {
-            pdf.setFont("helvetica", "normal");
-          }
-          
-          y += 10;
-        });
-      } else if (reportType === 'products' || reportType === 'categories') {
-        const headers = [reportType === 'products' ? 'Product' : 'Category', reportType === 'products' ? 'Quantity' : 'Sales ($)'];
-        const rows = reportData.map(data => {
-          if ('name' in data && 'value' in data) {
-            return [data.name, data.value.toString()];
-          }
-          return ['', ''];
-        }).filter(row => row[0] !== '');
-        
-        const total = reportData.reduce((sum, item) => {
-          if ('value' in item) {
-            return sum + item.value;
-          }
-          return sum;
-        }, 0);
-        rows.push(['TOTAL', total.toFixed(2)]);
-        
-        pdf.setFontSize(12);
-        pdf.text(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Summary`, 20, 40);
-        pdf.setFontSize(10);
-        
-        let y = 50;
-        pdf.text(headers[0], 20, y);
-        pdf.text(headers[1], 120, y);
-        y += 5;
-        pdf.line(20, y, 180, y);
-        y += 10;
-        
-        rows.forEach((row, i) => {
-          const isTotal = i === rows.length - 1;
-          if (isTotal) {
-            y += 5;
-            pdf.line(20, y - 7, 180, y - 7);
-            pdf.setFont("helvetica", "bold");
-          }
-          
-          const name = row[0].length > 30 ? row[0].substring(0, 27) + '...' : row[0];
-          pdf.text(name, 20, y);
-          pdf.text(row[1], 120, y);
-          
-          if (isTotal) {
-            pdf.setFont("helvetica", "normal");
-          }
-          
-          y += 10;
-        });
-      }
-      
-      let timeRangeText = 'All time';
-      switch (timeRange) {
-        case 'week': timeRangeText = 'Last week'; break;
-        case 'month': timeRangeText = 'Last month'; break;
-        case '6month': timeRangeText = 'Last 6 months'; break;
-        case 'year': timeRangeText = 'Last year'; break;
-      }
-      
-      pdf.setFontSize(10);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text(`Time period: ${timeRangeText}`, 20, pdf.internal.pageSize.height - 20);
-      
-      pdf.save(`${reportType}-report.pdf`);
-      
-      toast.success('PDF Report downloaded successfully');
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+  
+  const getCurrentData = () => {
+    if (activeTab === 'spending') {
+      return spendingData[timeRange];
+    } else if (activeTab === 'categories') {
+      return categoryData;
+    } else {
+      return productData;
     }
   };
   
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#E94A4A'];
+  const currentData = getCurrentData();
+  
+  const handleDownloadReport = () => {
+    // Create CSV content
+    let csvContent = 'data:text/csv;charset=utf-8,';
+    
+    if (activeTab === 'spending') {
+      const timeKey = timeRange === 'year' ? 'month' : 'day';
+      csvContent += `${timeKey},Amount\n`;
+      currentData.forEach(item => {
+        csvContent += `${item[timeKey]},${item.amount}\n`;
+      });
+    } else if (activeTab === 'categories') {
+      csvContent += 'Category,Amount\n';
+      currentData.forEach(item => {
+        csvContent += `${item.name},${item.value}\n`;
+      });
+    } else {
+      csvContent += 'Product,Purchase Count\n';
+      currentData.forEach(item => {
+        csvContent += `${item.name},${item.count}\n`;
+      });
+    }
+    
+    // Create download link
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `${activeTab}-report.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Report downloaded successfully');
+  };
   
   const renderChart = () => {
-    if (reportData.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-64">
-          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-center text-muted-foreground">
-            No data available for the selected time range
-          </p>
-        </div>
-      );
-    }
-    
-    if (reportType === 'sales') {
+    if (activeTab === 'spending') {
+      const dataKey = timeRange === 'year' ? 'month' : 'day';
+      
       return (
         <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={reportData}>
+          <LineChart data={currentData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
+            <XAxis dataKey={dataKey} />
             <YAxis />
-            <Tooltip formatter={(value) => `$${Number(value).toFixed(2)}`} />
-            <Legend />
-            <Line type="monotone" dataKey="sales" stroke="#E94A4A" activeDot={{ r: 8 }} />
+            <Tooltip formatter={(value) => [`$${value}`, 'Amount']} />
+            <Line 
+              type="monotone" 
+              dataKey="amount" 
+              stroke="#E94A4A" 
+              strokeWidth={2}
+              activeDot={{ r: 8 }} 
+            />
           </LineChart>
         </ResponsiveContainer>
       );
-    }
-    
-    if (reportType === 'products') {
-      return (
-        <ResponsiveContainer width="100%" height={400}>
-          <BarChart data={reportData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="value" fill="#E94A4A" name="Units Sold" />
-          </BarChart>
-        </ResponsiveContainer>
-      );
-    }
-    
-    if (reportType === 'categories') {
+    } else if (activeTab === 'categories') {
       return (
         <ResponsiveContainer width="100%" height={400}>
           <PieChart>
             <Pie
-              data={reportData}
+              data={currentData}
               cx="50%"
               cy="50%"
               labelLine={false}
@@ -361,13 +172,24 @@ const Reports = () => {
               nameKey="name"
               label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
             >
-              {reportData.map((entry, index) => (
+              {currentData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(value) => `$${Number(value).toFixed(2)}`} />
-            <Legend />
+            <Tooltip formatter={(value) => [`$${value}`, 'Amount']} />
           </PieChart>
+        </ResponsiveContainer>
+      );
+    } else {
+      return (
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart data={currentData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip formatter={(value) => [value, 'Purchase Count']} />
+            <Bar dataKey="count" fill="#E94A4A" />
+          </BarChart>
         </ResponsiveContainer>
       );
     }
@@ -376,101 +198,109 @@ const Reports = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Reports</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Your Shopping Reports</h2>
         <p className="text-muted-foreground">
-          Generate and download sales reports
+          Track your shopping patterns and history
         </p>
       </div>
       
       <Card>
         <CardHeader>
-          <CardTitle>Generate Report</CardTitle>
+          <CardTitle>Shopping Analytics</CardTitle>
           <CardDescription>
-            Select the report type and time range to generate
+            Gain insights into your shopping habits
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-8">
-            <div className="w-full sm:w-1/3">
-              <label 
-                htmlFor="report-type" 
-                className="text-sm font-medium block mb-2"
+          <Tabs
+            defaultValue="spending"
+            className="space-y-6"
+            onValueChange={setActiveTab}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <TabsList>
+                <TabsTrigger value="spending" className="flex items-center gap-2">
+                  <LineChartIcon className="h-4 w-4" />
+                  Spending History
+                </TabsTrigger>
+                <TabsTrigger value="categories" className="flex items-center gap-2">
+                  <PieChartIcon className="h-4 w-4" />
+                  Categories
+                </TabsTrigger>
+                <TabsTrigger value="products" className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Products
+                </TabsTrigger>
+              </TabsList>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDownloadReport}
+                className="flex items-center gap-2"
               >
-                Report Type
-              </label>
-              <Select 
-                value={reportType} 
-                onValueChange={setReportType}
-              >
-                <SelectTrigger id="report-type">
-                  <SelectValue placeholder="Select Report Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sales">Sales Report</SelectItem>
-                  <SelectItem value="products">Product Performance</SelectItem>
-                  <SelectItem value="categories">Category Analysis</SelectItem>
-                </SelectContent>
-              </Select>
+                <Download className="h-4 w-4" />
+                Download Report
+              </Button>
             </div>
             
-            <div className="w-full sm:w-1/3">
-              <label 
-                htmlFor="time-range" 
-                className="text-sm font-medium block mb-2"
-              >
-                Time Range
-              </label>
-              <Select 
-                value={timeRange} 
-                onValueChange={setTimeRange}
-              >
-                <SelectTrigger id="time-range">
-                  <SelectValue placeholder="Select Time Range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="week">Last Week</SelectItem>
-                  <SelectItem value="month">Last Month</SelectItem>
-                  <SelectItem value="6month">Last 6 Months</SelectItem>
-                  <SelectItem value="year">Last Year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <TabsContent value="spending" className="space-y-4">
+              <div className="flex justify-end items-center">
+                <div className="w-48">
+                  <Select
+                    value={timeRange}
+                    onValueChange={setTimeRange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select time range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="week">Last 7 days</SelectItem>
+                      <SelectItem value="month">Last 30 days</SelectItem>
+                      <SelectItem value="year">Last 12 months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {renderChart()}
+              
+              <div className="mt-4">
+                <h4 className="font-medium">Key Insights</h4>
+                <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
+                  <li>Your highest spending was in {timeRange === 'year' ? 'December' : timeRange === 'month' ? 'Week 4' : 'Wednesday'}</li>
+                  <li>You spent 15% more than your usual average this {timeRange}</li>
+                  <li>Most purchases were made on weekends</li>
+                </ul>
+              </div>
+            </TabsContent>
             
-            <div className="w-full sm:w-1/3 flex items-end">
-              <Menubar className="border-none p-0 w-full">
-                <MenubarMenu>
-                  <MenubarTrigger asChild>
-                    <Button 
-                      className="w-full"
-                      disabled={reportData.length === 0}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Report
-                    </Button>
-                  </MenubarTrigger>
-                  <MenubarContent>
-                    <MenubarItem 
-                      onClick={() => handleDownloadReport('csv')}
-                      disabled={reportData.length === 0}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Download as CSV
-                    </MenubarItem>
-                    <MenubarItem 
-                      onClick={() => handleDownloadReport('pdf')}
-                      disabled={reportData.length === 0}
-                    >
-                      <FileIcon className="h-4 w-4 mr-2" />
-                      Download as PDF
-                    </MenubarItem>
-                  </MenubarContent>
-                </MenubarMenu>
-              </Menubar>
-            </div>
-          </div>
-          
-          {renderChart()}
+            <TabsContent value="categories">
+              {renderChart()}
+              
+              <div className="mt-4">
+                <h4 className="font-medium">Category Insights</h4>
+                <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
+                  <li>Electronics is your top spending category</li>
+                  <li>You spend 30% more on Clothing than the average user</li>
+                  <li>Your Home & Kitchen purchases have increased by 15% recently</li>
+                </ul>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="products">
+              {renderChart()}
+              
+              <div className="mt-4">
+                <h4 className="font-medium">Product Insights</h4>
+                <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
+                  <li>You've purchased T-shirts most frequently</li>
+                  <li>Your technology purchases are typically high-value items</li>
+                  <li>You tend to repurchase headphones every 6 months</li>
+                </ul>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
