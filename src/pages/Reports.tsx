@@ -16,8 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Download, FileText } from 'lucide-react';
-import { 
+import {
   BarChart,
   Bar,
   XAxis,
@@ -32,8 +31,17 @@ import {
   Cell,
   Legend,
 } from 'recharts';
+import { Download, FileText, FilePdf, FileX2 } from 'lucide-react';
 import { Order } from '@/types/Product';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
+import { 
+  Menubar,
+  MenubarMenu,
+  MenubarTrigger,
+  MenubarContent,
+  MenubarItem,
+} from '@/components/ui/menubar';
 
 const Reports = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -144,37 +152,150 @@ const Reports = () => {
   
   const reportData = generateReportData();
   
-  const handleDownloadReport = () => {
-    // Create CSV content
-    let csvContent = 'data:text/csv;charset=utf-8,';
-    
-    if (reportType === 'sales') {
-      csvContent += 'Month,Sales\n';
-      reportData.forEach(data => {
-        csvContent += `${data.month},${data.sales.toFixed(2)}\n`;
-      });
-    } else if (reportType === 'products') {
-      csvContent += 'Product,Quantity\n';
-      reportData.forEach(data => {
-        csvContent += `"${data.name}",${data.value}\n`;
-      });
-    } else if (reportType === 'categories') {
-      csvContent += 'Category,Sales\n';
-      reportData.forEach(data => {
-        csvContent += `"${data.name}",${data.value.toFixed(2)}\n`;
-      });
+  const handleDownloadReport = (format: 'csv' | 'pdf') => {
+    if (format === 'csv') {
+      // Create CSV content
+      let csvContent = 'data:text/csv;charset=utf-8,';
+      
+      if (reportType === 'sales') {
+        csvContent += 'Month,Sales\n';
+        reportData.forEach(data => {
+          csvContent += `${data.month},${data.sales.toFixed(2)}\n`;
+        });
+      } else if (reportType === 'products') {
+        csvContent += 'Product,Quantity\n';
+        reportData.forEach(data => {
+          csvContent += `"${data.name}",${data.value}\n`;
+        });
+      } else if (reportType === 'categories') {
+        csvContent += 'Category,Sales\n';
+        reportData.forEach(data => {
+          csvContent += `"${data.name}",${data.value.toFixed(2)}\n`;
+        });
+      }
+      
+      // Create download link
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `${reportType}-report.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('CSV Report downloaded successfully');
+    } else if (format === 'pdf') {
+      // Create PDF document
+      const pdf = new jsPDF();
+      
+      // Add title
+      const title = `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`;
+      pdf.setFontSize(18);
+      pdf.text(title, 20, 20);
+      pdf.setFontSize(12);
+      pdf.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
+      
+      // Add report data
+      pdf.setFontSize(10);
+      
+      if (reportType === 'sales') {
+        // Create sales report table
+        const headers = ['Month', 'Sales ($)'];
+        const rows = reportData.map(data => [data.month, data.sales.toFixed(2)]);
+        
+        // Calculate total sales
+        const totalSales = reportData.reduce((sum, item) => sum + item.sales, 0);
+        rows.push(['TOTAL', totalSales.toFixed(2)]);
+        
+        // Add table
+        pdf.setFontSize(12);
+        pdf.text('Sales Summary', 20, 40);
+        pdf.setFontSize(10);
+        
+        let y = 50;
+        pdf.text(headers[0], 20, y);
+        pdf.text(headers[1], 80, y);
+        y += 5;
+        pdf.line(20, y, 120, y);
+        y += 10;
+        
+        rows.forEach((row, i) => {
+          const isTotal = i === rows.length - 1;
+          if (isTotal) {
+            y += 5;
+            pdf.line(20, y - 7, 120, y - 7);
+            pdf.setFont("helvetica", "bold");
+          }
+          
+          pdf.text(row[0], 20, y);
+          pdf.text(row[1], 80, y);
+          
+          if (isTotal) {
+            pdf.setFont("helvetica", "normal");
+          }
+          
+          y += 10;
+        });
+      } else if (reportType === 'products' || reportType === 'categories') {
+        // Create products/categories report table
+        const headers = [reportType === 'products' ? 'Product' : 'Category', reportType === 'products' ? 'Quantity' : 'Sales ($)'];
+        const rows = reportData.map(data => [data.name, data.value.toString()]);
+        
+        // Calculate total
+        const total = reportData.reduce((sum, item) => sum + item.value, 0);
+        rows.push(['TOTAL', total.toFixed(2)]);
+        
+        // Add table
+        pdf.setFontSize(12);
+        pdf.text(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Summary`, 20, 40);
+        pdf.setFontSize(10);
+        
+        let y = 50;
+        pdf.text(headers[0], 20, y);
+        pdf.text(headers[1], 120, y);
+        y += 5;
+        pdf.line(20, y, 180, y);
+        y += 10;
+        
+        rows.forEach((row, i) => {
+          const isTotal = i === rows.length - 1;
+          if (isTotal) {
+            y += 5;
+            pdf.line(20, y - 7, 180, y - 7);
+            pdf.setFont("helvetica", "bold");
+          }
+          
+          // Truncate long product/category names
+          const name = row[0].length > 30 ? row[0].substring(0, 27) + '...' : row[0];
+          pdf.text(name, 20, y);
+          pdf.text(row[1], 120, y);
+          
+          if (isTotal) {
+            pdf.setFont("helvetica", "normal");
+          }
+          
+          y += 10;
+        });
+      }
+      
+      // Add note about time range
+      let timeRangeText = 'All time';
+      switch (timeRange) {
+        case 'week': timeRangeText = 'Last week'; break;
+        case 'month': timeRangeText = 'Last month'; break;
+        case '6month': timeRangeText = 'Last 6 months'; break;
+        case 'year': timeRangeText = 'Last year'; break;
+      }
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`Time period: ${timeRangeText}`, 20, pdf.internal.pageSize.height - 20);
+      
+      // Save PDF file
+      pdf.save(`${reportType}-report.pdf`);
+      
+      toast.success('PDF Report downloaded successfully');
     }
-    
-    // Create download link
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `${reportType}-report.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast.success('Report downloaded successfully');
   };
   
   // Colors for charts
@@ -314,14 +435,35 @@ const Reports = () => {
             </div>
             
             <div className="w-full sm:w-1/3 flex items-end">
-              <Button 
-                className="w-full"
-                onClick={handleDownloadReport}
-                disabled={reportData.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download Report
-              </Button>
+              <Menubar className="border-none p-0 w-full">
+                <MenubarMenu>
+                  <MenubarTrigger asChild>
+                    <Button 
+                      className="w-full"
+                      disabled={reportData.length === 0}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Report
+                    </Button>
+                  </MenubarTrigger>
+                  <MenubarContent>
+                    <MenubarItem 
+                      onClick={() => handleDownloadReport('csv')}
+                      disabled={reportData.length === 0}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Download as CSV
+                    </MenubarItem>
+                    <MenubarItem 
+                      onClick={() => handleDownloadReport('pdf')}
+                      disabled={reportData.length === 0}
+                    >
+                      <FilePdf className="h-4 w-4 mr-2" />
+                      Download as PDF
+                    </MenubarItem>
+                  </MenubarContent>
+                </MenubarMenu>
+              </Menubar>
             </div>
           </div>
           
