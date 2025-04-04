@@ -2,9 +2,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Bell, Search, Menu, User, LogOut } from "lucide-react";
+import { ShoppingCart, Search, Menu, User, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +20,7 @@ import DashboardSidebar from "./DashboardSidebar";
 
 const DashboardHeader = () => {
   const { user, logout } = useAuth();
+  const { totalItems } = useCart();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -54,12 +56,19 @@ const DashboardHeader = () => {
         />
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-            3
-          </span>
-          <span className="sr-only">Notifications</span>
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="relative"
+          onClick={() => navigate('/cart')}
+        >
+          <ShoppingCart className="h-5 w-5" />
+          {totalItems > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+              {totalItems > 99 ? '99+' : totalItems}
+            </span>
+          )}
+          <span className="sr-only">Shopping Cart</span>
         </Button>
         
         <DropdownMenu>
