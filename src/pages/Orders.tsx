@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getUserOrders } from '@/services/api';
+import { getUserOrders, cancelOrder } from '@/services/api';
 import { 
   Table, 
   TableBody, 
@@ -37,20 +37,55 @@ import { useNavigate } from 'react-router-dom';
 const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Load orders from localStorage
-    const userOrders = getUserOrders();
-    setOrders(userOrders);
+    const fetchOrders = async () => {
+      setIsLoading(true);
+      try {
+        const userOrders = await getUserOrders();
+        setOrders(userOrders);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        toast.error("Failed to load orders");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchOrders();
   }, []);
   
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
   };
   
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      const success = await cancelOrder(orderId);
+      if (success) {
+        setOrders(orders.map(order => 
+          order.id === orderId 
+            ? { ...order, status: 'cancelled' as const } 
+            : order
+        ));
+        
+        if (selectedOrder?.id === orderId) {
+          setSelectedOrder({ ...selectedOrder, status: 'cancelled' as const });
+        }
+        
+        toast.success("Order cancelled successfully");
+      } else {
+        toast.error("Failed to cancel order");
+      }
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      toast.error("Error cancelling order");
+    }
+  };
+  
   const handleDownloadReport = (order: Order) => {
-    // Create CSV content
     let csvContent = 'data:text/csv;charset=utf-8,';
     csvContent += 'Order ID,Date,Status,Product,Price,Quantity,Subtotal\n';
     
@@ -59,11 +94,9 @@ const Orders = () => {
       csvContent += `"${item.title}",${item.price},${item.quantity},${(item.price * item.quantity).toFixed(2)}\n`;
     });
     
-    // Add total row
     csvContent += `${order.id},${new Date(order.date).toLocaleDateString()},${order.status},`;
     csvContent += `"TOTAL",,,"$${order.total.toFixed(2)}"\n`;
     
-    // Create download link
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -90,18 +123,32 @@ const Orders = () => {
     }
   };
   
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Your Orders</h2>
+          <p className="text-muted-foreground">Loading your order history...</p>
+        </div>
+        <Card>
+          <CardContent className="flex justify-center items-center p-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  if (orders.length === 0) {
+    return (
+      <div className="space-y-6">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Your Orders</h2>
           <p className="text-muted-foreground">
             View and track your order history
           </p>
         </div>
-      </div>
-      
-      {orders.length === 0 ? (
+        
         <Card>
           <CardHeader>
             <CardTitle>No Orders Yet</CardTitle>
@@ -125,182 +172,204 @@ const Orders = () => {
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Order History</CardTitle>
-            <CardDescription>
-              You have {orders.length} order{orders.length !== 1 ? 's' : ''} in total
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>
-                      {new Date(order.date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={getStatusColor(order.status)}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>${order.total.toFixed(2)}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleViewOrder(order)}
-                          >
-                            View
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-3xl">
-                          <DialogHeader>
-                            <DialogTitle>
-                              Order Details #{selectedOrder?.id}
-                            </DialogTitle>
-                          </DialogHeader>
-                          {selectedOrder && (
-                            <div className="space-y-6">
-                              <div className="flex flex-col md:flex-row justify-between gap-6">
-                                <div>
-                                  <h4 className="text-sm font-medium mb-2">
-                                    Order Information
-                                  </h4>
-                                  <div className="text-sm">
-                                    <p>
-                                      <span className="font-medium">Date:</span>{' '}
-                                      {new Date(selectedOrder.date).toLocaleDateString()}
-                                    </p>
-                                    <p>
-                                      <span className="font-medium">Status:</span>{' '}
-                                      <Badge 
-                                        variant="outline" 
-                                        className={getStatusColor(selectedOrder.status)}
-                                      >
-                                        {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
-                                      </Badge>
-                                    </p>
-                                  </div>
-                                </div>
-                                
-                                {selectedOrder.shippingAddress && (
-                                  <div>
-                                    <h4 className="text-sm font-medium mb-2">
-                                      Shipping Address
-                                    </h4>
-                                    <div className="text-sm">
-                                      <p>{selectedOrder.shippingAddress.name}</p>
-                                      <p>{selectedOrder.shippingAddress.street}</p>
-                                      <p>
-                                        {selectedOrder.shippingAddress.city},{' '}
-                                        {selectedOrder.shippingAddress.state}{' '}
-                                        {selectedOrder.shippingAddress.zip}
-                                      </p>
-                                      <p>{selectedOrder.shippingAddress.country}</p>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                              
+      </div>
+    );
+  }
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Your Orders</h2>
+          <p className="text-muted-foreground">
+            View and track your order history
+          </p>
+        </div>
+      </div>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Order History</CardTitle>
+          <CardDescription>
+            You have {orders.length} order{orders.length !== 1 ? 's' : ''} in total
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Order ID</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {orders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-medium">{order.id}</TableCell>
+                  <TableCell>
+                    {new Date(order.date).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={getStatusColor(order.status)}>
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>${order.total.toFixed(2)}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewOrder(order)}
+                        >
+                          View
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl">
+                        <DialogHeader>
+                          <DialogTitle>
+                            Order Details #{selectedOrder?.id}
+                          </DialogTitle>
+                        </DialogHeader>
+                        {selectedOrder && (
+                          <div className="space-y-6">
+                            <div className="flex flex-col md:flex-row justify-between gap-6">
                               <div>
                                 <h4 className="text-sm font-medium mb-2">
-                                  Order Items
+                                  Order Information
                                 </h4>
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Product</TableHead>
-                                      <TableHead className="text-right">Quantity</TableHead>
-                                      <TableHead className="text-right">Price</TableHead>
-                                      <TableHead className="text-right">Subtotal</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {selectedOrder.items.map((item) => (
-                                      <TableRow key={item.id}>
-                                        <TableCell>
-                                          <div className="flex items-center gap-3">
-                                            <div className="h-12 w-12 rounded bg-muted flex items-center justify-center overflow-hidden">
-                                              <img 
-                                                src={item.image} 
-                                                alt={item.title}
-                                                className="object-contain h-10 w-10" 
-                                              />
-                                            </div>
-                                            <span className="line-clamp-1">{item.title}</span>
+                                <div className="text-sm">
+                                  <p>
+                                    <span className="font-medium">Date:</span>{' '}
+                                    {new Date(selectedOrder.date).toLocaleDateString()}
+                                  </p>
+                                  <p>
+                                    <span className="font-medium">Status:</span>{' '}
+                                    <Badge 
+                                      variant="outline" 
+                                      className={getStatusColor(selectedOrder.status)}
+                                    >
+                                      {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
+                                    </Badge>
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {selectedOrder.shippingAddress && (
+                                <div>
+                                  <h4 className="text-sm font-medium mb-2">
+                                    Shipping Address
+                                  </h4>
+                                  <div className="text-sm">
+                                    <p>{selectedOrder.shippingAddress.name}</p>
+                                    <p>{selectedOrder.shippingAddress.street}</p>
+                                    <p>
+                                      {selectedOrder.shippingAddress.city},{' '}
+                                      {selectedOrder.shippingAddress.state}{' '}
+                                      {selectedOrder.shippingAddress.zip}
+                                    </p>
+                                    <p>{selectedOrder.shippingAddress.country}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">
+                                Order Items
+                              </h4>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Product</TableHead>
+                                    <TableHead className="text-right">Quantity</TableHead>
+                                    <TableHead className="text-right">Price</TableHead>
+                                    <TableHead className="text-right">Subtotal</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {selectedOrder.items.map((item) => (
+                                    <TableRow key={item.id}>
+                                      <TableCell>
+                                        <div className="flex items-center gap-3">
+                                          <div className="h-12 w-12 rounded bg-muted flex items-center justify-center overflow-hidden">
+                                            <img 
+                                              src={item.image} 
+                                              alt={item.title}
+                                              className="object-contain h-10 w-10" 
+                                            />
                                           </div>
-                                        </TableCell>
-                                        <TableCell className="text-right">{item.quantity}</TableCell>
-                                        <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
-                                        <TableCell className="text-right">
-                                          ${(item.price * item.quantity).toFixed(2)}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                                
-                                <div className="flex justify-end mt-4">
-                                  <div className="w-48 space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                      <span>Subtotal:</span>
-                                      <span>${selectedOrder.total.toFixed(2)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                      <span>Shipping:</span>
-                                      <span>$0.00</span>
-                                    </div>
-                                    <div className="flex justify-between font-medium">
-                                      <span>Total:</span>
-                                      <span>${selectedOrder.total.toFixed(2)}</span>
-                                    </div>
+                                          <span className="line-clamp-1">{item.title}</span>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-right">{item.quantity}</TableCell>
+                                      <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
+                                      <TableCell className="text-right">
+                                        ${(item.price * item.quantity).toFixed(2)}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                              
+                              <div className="flex justify-end mt-4">
+                                <div className="w-48 space-y-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span>Subtotal:</span>
+                                    <span>${selectedOrder.total.toFixed(2)}</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span>Shipping:</span>
+                                    <span>$0.00</span>
+                                  </div>
+                                  <div className="flex justify-between font-medium">
+                                    <span>Total:</span>
+                                    <span>${selectedOrder.total.toFixed(2)}</span>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          )}
-                          <DialogFooter>
+                          </div>
+                        )}
+                        <DialogFooter className="flex justify-between">
+                          {selectedOrder?.status !== 'cancelled' && (
                             <Button 
-                              variant="outline"
-                              onClick={() => handleDownloadReport(selectedOrder!)}
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleCancelOrder(selectedOrder!.id)}
                             >
-                              <Download className="h-4 w-4 mr-2" />
-                              Download Report
+                              Cancel Order
                             </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDownloadReport(order)}
-                      >
-                        <Download className="h-4 w-4" />
-                        <span className="sr-only">Download</span>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                          )}
+                          <Button 
+                            variant="outline"
+                            onClick={() => handleDownloadReport(selectedOrder!)}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download Report
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleDownloadReport(order)}
+                    >
+                      <Download className="h-4 w-4" />
+                      <span className="sr-only">Download</span>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -56,6 +56,7 @@ interface ShippingFormValues {
 const Cart = () => {
   const { items, updateQuantity, removeFromCart, totalItems, totalPrice, clearCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   
   const form = useForm<ShippingFormValues>({
@@ -77,30 +78,34 @@ const Cart = () => {
     updateQuantity(id, newQuantity);
   };
   
-  const handleCheckout = (values: ShippingFormValues) => {
+  const handleCheckout = async (values: ShippingFormValues) => {
     if (items.length === 0) {
       toast.error('Your cart is empty');
       return;
     }
     
+    setIsSubmitting(true);
     try {
-      // Fix: Explicitly type the status as one of the allowed order status values
       const newOrder: Omit<Order, 'id'> = {
         date: new Date().toISOString(),
-        status: 'pending' as const, // Using 'as const' to ensure TypeScript treats this as a literal type
+        status: 'pending' as const,
         items: [...items],
         total: totalPrice,
         shippingAddress: values
       };
       
-      addOrder(newOrder);
+      // Now using async API call that simulates a Django backend
+      await addOrder(newOrder);
+      
       clearCart();
       toast.success('Order placed successfully!');
       setIsCheckingOut(false);
       navigate('/orders');
     } catch (error) {
-      toast.error('Failed to place order');
-      console.error(error);
+      console.error('Failed to place order:', error);
+      toast.error('Failed to place order. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -270,12 +275,19 @@ const Cart = () => {
                     
                     <div className="flex justify-end gap-3 pt-4">
                       <SheetClose asChild>
-                        <Button variant="outline" type="button">
+                        <Button variant="outline" type="button" disabled={isSubmitting}>
                           Cancel
                         </Button>
                       </SheetClose>
-                      <Button type="submit">
-                        Place Order - ${totalPrice.toFixed(2)}
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? (
+                          <>
+                            <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-background border-t-transparent"></div>
+                            Processing...
+                          </>
+                        ) : (
+                          <>Place Order - ${totalPrice.toFixed(2)}</>
+                        )}
                       </Button>
                     </div>
                   </form>
