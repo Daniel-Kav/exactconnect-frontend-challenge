@@ -20,6 +20,12 @@ const ENDPOINTS = {
   transactions: '/api/transactions/'
 };
 
+// Wishlist API endpoints
+const WISHLIST_ENDPOINTS = {
+  wishlist: '/api/wishlist/',
+  wishlistItem: '/api/wishlist/:id/'
+};
+
 // Helper function to get auth headers
 const getAuthHeaders = () => {
   const token = getToken();
@@ -297,5 +303,83 @@ export const getTransactions = async (): Promise<any[]> => {
   } catch (error) {
     console.error("Failed to get transactions:", error);
     return [];
+  }
+};
+
+// Get user's wishlist
+export const getWishlist = async (): Promise<Product[]> => {
+  try {
+    const response = await fetch(`${DJANGO_API_BASE_URL}${WISHLIST_ENDPOINTS.wishlist}`, {
+      headers: getAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error fetching wishlist: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    await simulateNetworkDelay(); // Simulate network delay
+    return data;
+  } catch (error) {
+    console.error("Failed to get wishlist:", error);
+    return [];
+  }
+};
+
+// Add product to wishlist
+export const addToWishlist = async (product: Product): Promise<Product> => {
+  try {
+    const response = await fetch(`${DJANGO_API_BASE_URL}${WISHLIST_ENDPOINTS.wishlist}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify(product)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to add to wishlist');
+    }
+    
+    const data = await response.json();
+    await simulateNetworkDelay(); // Simulate network delay
+    return data;
+  } catch (error) {
+    console.error("Failed to add to wishlist:", error);
+    throw error;
+  }
+};
+
+// Remove product from wishlist
+export const removeFromWishlist = async (productId: number): Promise<boolean> => {
+  try {
+    const response = await fetch(`${DJANGO_API_BASE_URL}${WISHLIST_ENDPOINTS.wishlistItem.replace(':id', productId.toString())}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    
+    await simulateNetworkDelay(); // Simulate network delay
+    return response.ok;
+  } catch (error) {
+    console.error(`Failed to remove product ${productId} from wishlist:`, error);
+    return false;
+  }
+};
+
+// Clear entire wishlist
+export const clearWishlist = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${DJANGO_API_BASE_URL}${WISHLIST_ENDPOINTS.wishlist}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    
+    await simulateNetworkDelay(); // Simulate network delay
+    return response.ok;
+  } catch (error) {
+    console.error("Failed to clear wishlist:", error);
+    return false;
   }
 };
