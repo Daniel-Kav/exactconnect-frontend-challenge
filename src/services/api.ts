@@ -2,7 +2,7 @@ import { Product, Order, CartItem } from "@/types/Product";
 import { getToken } from './auth';
 
 // Base URLs for the APIs
-const DJANGO_API_BASE_URL = 'http://localhost:8000'; // Django backend URL for auth and orders
+const DJANGO_API_BASE_URL = 'https://shopper-hub-9avf.onrender.com'; // Django backend URL for auth and orders
 const FAKESTORE_API_BASE_URL = 'https://fakestoreapi.com'; // FakeStore API for products
 
 // API endpoints
