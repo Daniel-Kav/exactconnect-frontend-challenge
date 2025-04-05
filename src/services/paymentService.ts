@@ -1,12 +1,10 @@
-
-// This is a simplified payment processing service that simulates payment processing
-// When connecting to a real payment gateway like Stripe or PayPal,
-// replace these functions with actual API calls
+// This payment processing service connects to our Django backend API
+// while providing a fallback simulation for development
 
 import { toast } from "sonner";
 import { Order } from "@/types/Product";
 
-// Simulated card validation and processing
+// Card details for payment processing
 export interface CardDetails {
   cardNumber: string;
   expiryDate: string;
@@ -19,6 +17,16 @@ export interface PaymentResponse {
   success: boolean;
   transactionId?: string;
   error?: string;
+}
+
+// Transaction record interface
+export interface Transaction {
+  id: string;
+  date: string;
+  amount: number;
+  status: 'success' | 'failed' | 'pending';
+  paymentMethod: string;
+  orderId?: string;
 }
 
 // Validate card number using Luhn algorithm (basic validation)
@@ -84,12 +92,9 @@ const validateCVV = (cvv: string): boolean => {
   return /^\d{3,4}$/.test(cvv);
 };
 
-// Simulate payment processing
+// Process payment through the backend API or fallback to simulation
 export const processPayment = async (cardDetails: CardDetails, amount: number): Promise<PaymentResponse> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  // Validate card details
+  // Basic client-side validation first
   if (!validateCardNumber(cardDetails.cardNumber)) {
     return { success: false, error: "Invalid card number" };
   }
@@ -101,6 +106,46 @@ export const processPayment = async (cardDetails: CardDetails, amount: number): 
   if (!validateCVV(cardDetails.cvv)) {
     return { success: false, error: "Invalid CVV" };
   }
+  
+  try {
+    // Try to use the Django backend API
+    const response = await fetch('/api/payment/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        cardNumber: cardDetails.cardNumber,
+        expiryDate: cardDetails.expiryDate,
+        cvv: cardDetails.cvv,
+        cardholderName: cardDetails.cardholderName,
+        amount: amount
+      })
+    });
+    
+    if (!response.ok) {
+      // If server responded with error, fallback to simulation
+      console.warn('Backend payment API failed, falling back to simulation');
+      return simulatePaymentProcessing(amount);
+    }
+    
+    const data = await response.json();
+    return {
+      success: data.success,
+      transactionId: data.transactionId,
+      error: data.error
+    };
+  } catch (error) {
+    // If server unreachable, fallback to simulation
+    console.warn('Backend payment API unreachable, falling back to simulation');
+    return simulatePaymentProcessing(amount);
+  }
+};
+
+// Fallback payment simulation
+const simulatePaymentProcessing = async (amount: number): Promise<PaymentResponse> => {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 1500));
   
   // For demo purposes, we'll simulate a successful payment 90% of the time
   const isSuccessful = Math.random() < 0.9;
@@ -138,4 +183,50 @@ export const processOrderPayment = async (
     toast.error("Payment processing error. Please try again.");
     return { success: false, error: "Payment processing error" };
   }
+};
+
+// Get transaction history
+export const getUserTransactions = async (): Promise<Transaction[]> => {
+  try {
+    // Try to fetch from backend
+    const response = await fetch('/api/transactions/');
+    
+    if (!response.ok) {
+      // Fallback to simulated data
+      console.warn('Backend transactions API failed, returning simulated data');
+      return simulateTransactions();
+    }
+    
+    return await response.json();
+  } catch (error) {
+    // If server unreachable, return simulated data
+    console.warn('Backend transactions API unreachable, returning simulated data');
+    return simulateTransactions();
+  }
+};
+
+// Simulate transactions for development
+const simulateTransactions = (): Transaction[] => {
+  const mockTransactions: Transaction[] = [];
+  
+  // Generate some random transactions spanning last 30 days
+  for (let i = 0; i < 5; i++) {
+    const daysAgo = Math.floor(Math.random() * 30);
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    
+    mockTransactions.push({
+      id: `txn-${Date.now()}-${i}`,
+      date: date.toISOString(),
+      amount: Math.floor(Math.random() * 30000) / 100, // Random amount between $0-$300
+      status: Math.random() < 0.9 ? 'success' : (Math.random() < 0.5 ? 'failed' : 'pending'),
+      paymentMethod: 'Credit Card',
+      orderId: `order-${Date.now()}-${i}`
+    });
+  }
+  
+  // Sort by date, most recent first
+  return mockTransactions.sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
 };

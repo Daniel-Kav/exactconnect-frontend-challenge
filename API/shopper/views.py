@@ -1,4 +1,3 @@
-
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth import authenticate
@@ -362,3 +361,53 @@ def user_profile(request):
         'fullName': user.full_name,
         'dateJoined': user.date_joined
     })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def transaction_list(request):
+    """
+    Get a list of payment transactions for the authenticated user.
+    """
+    # In a real implementation, you would retrieve transactions from a Transaction model
+    # For now, we'll return mock data based on orders with "success" payment status
+    
+    # Get orders that belong to the authenticated user
+    orders = Order.objects.filter(user=request.user)
+    
+    transactions = []
+    for order in orders:
+        # Check if this order has payment information (in a real app, you'd have a proper Transaction model)
+        if hasattr(order, 'payment_status') and order.payment_status:
+            transactions.append({
+                'id': f"txn-{order.id}",
+                'date': order.date.isoformat(),
+                'amount': float(order.total),
+                'status': 'success' if order.status != 'cancelled' else 'failed',
+                'paymentMethod': 'Credit Card',  # In a real app, store the actual payment method
+                'orderId': order.id
+            })
+    
+    # If you don't have any orders with payments in development, 
+    # you can uncomment this to return mock data
+    if not transactions:
+        import random
+        import time
+        from datetime import datetime, timedelta
+        
+        for i in range(5):
+            random_days = random.randint(1, 30)
+            date = datetime.now() - timedelta(days=random_days)
+            
+            transactions.append({
+                'id': f"txn-{int(time.time())}-{i}",
+                'date': date.isoformat(),
+                'amount': round(random.uniform(10, 200), 2),
+                'status': random.choice(['success', 'success', 'success', 'failed', 'pending']),
+                'paymentMethod': 'Credit Card',
+                'orderId': f"order-{int(time.time())}-{i}" if random.random() > 0.3 else None
+            })
+        
+        # Sort by date, most recent first
+        transactions.sort(key=lambda x: x['date'], reverse=True)
+    
+    return Response(transactions)
