@@ -1,10 +1,12 @@
-
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
+from django.contrib.auth import authenticate
 from rest_framework import viewsets, status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from .models import Product, Order, OrderItem
+from rest_framework.authtoken.models import Token
+from .models import Product, Order, OrderItem, User
 
 # Sample view function for what a Product list API might look like
 @api_view(['GET'])
@@ -209,3 +211,91 @@ def cancel_order(request, pk):
     order.save()
     
     return Response({'status': 'Order cancelled'})
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def user_signup(request):
+    """
+    Create a new user account with fullName, email, and password.
+    """
+    data = request.data
+    
+    # Check if required fields are present
+    if not all(k in data for k in ['fullName', 'email', 'password']):
+        return Response({'error': 'fullName, email, and password are required'}, 
+                        status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if user with this email already exists
+    if User.objects.filter(email=data['email']).exists():
+        return Response({'error': 'A user with this email already exists'}, 
+                        status=status.HTTP_400_BAD_REQUEST)
+    
+    # Create new user
+    try:
+        user = User.objects.create_user(
+            email=data['email'],
+            full_name=data['fullName'],
+            password=data['password']
+        )
+        
+        # Create token for the user
+        token, _ = Token.objects.get_or_create(user=user)
+        
+        return Response({
+            'token': token.key,
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'fullName': user.full_name
+            }
+        }, status=status.HTTP_201_CREATED)
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def user_login(request):
+    """
+    Authenticate a user with email and password.
+    """
+    data = request.data
+    
+    # Check if required fields are present
+    if not all(k in data for k in ['email', 'password']):
+        return Response({'error': 'Email and password are required'}, 
+                        status=status.HTTP_400_BAD_REQUEST)
+    
+    # Authenticate user
+    user = authenticate(email=data['email'], password=data['password'])
+    
+    if user:
+        # Create or get token
+        token, _ = Token.objects.get_or_create(user=user)
+        
+        return Response({
+            'token': token.key,
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'fullName': user.full_name
+            }
+        })
+    else:
+        return Response({'error': 'Invalid credentials'}, 
+                        status=status.HTTP_401_UNAUTHORIZED)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_profile(request):
+    """
+    Get the profile of the authenticated user.
+    """
+    user = request.user
+    
+    return Response({
+        'id': user.id,
+        'email': user.email,
+        'fullName': user.full_name,
+        'dateJoined': user.date_joined
+    })
