@@ -28,6 +28,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'shopper-hub-9avf.onrender.com']
 
+CSRF_TRUSTED_ORIGINS = ['https://shopper-hub-9avf.onrender.com',
+                        'https://shopper-insight-hub.vercel.app',]
+
+
 
 # Application definition
 
