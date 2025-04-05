@@ -31,6 +31,7 @@ class Order(models.Model):
         ('cancelled', 'Cancelled'),
     ]
     id = models.CharField(primary_key=True, max_length=100)  # Using string ID to match frontend
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='orders', null=True, blank=True)
     date = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     total = models.DecimalField(max_digits=10, decimal_places=2)
