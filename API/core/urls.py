@@ -1,3 +1,4 @@
+
 """
 URL configuration for core project.
 
@@ -29,6 +30,7 @@ urlpatterns = [
     path('api/orders/', views.order_list, name='order-list'),
     path('api/orders/<str:pk>/', views.order_detail, name='order-detail'),
     path('api/orders/<str:pk>/cancel/', views.cancel_order, name='cancel-order'),
+    path('api/payment/', views.process_payment, name='process-payment'),
     
     # Authentication endpoints
     path('api/auth/signup/', views.user_signup, name='user-signup'),

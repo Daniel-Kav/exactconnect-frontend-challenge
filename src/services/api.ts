@@ -11,7 +11,8 @@ const DJANGO_API = {
   categories: '/api/categories/',
   productsByCategory: '/api/products/category/:category/',
   orders: '/api/orders/',
-  order: '/api/orders/:id/'
+  order: '/api/orders/:id/',
+  payment: '/api/payment/'
 };
 
 // Helper function to simulate API delays
@@ -107,6 +108,66 @@ export const getCategories = async (): Promise<string[]> => {
   } catch (error) {
     console.error("Failed to fetch categories:", error);
     throw error;
+  }
+};
+
+// Payment interface
+export interface PaymentDetails {
+  cardNumber: string;
+  expiryDate: string;
+  cvv: string;
+  cardholderName: string;
+  amount: number;
+}
+
+// Payment response interface
+export interface PaymentResponse {
+  success: boolean;
+  transactionId?: string;
+  error?: string;
+}
+
+// Process a payment
+export const processPayment = async (paymentDetails: PaymentDetails): Promise<PaymentResponse> => {
+  try {
+    // When switching to Django, replace with:
+    // const response = await fetch(`${YOUR_DJANGO_URL}${DJANGO_API.payment}`, {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(paymentDetails)
+    // });
+    
+    // if (!response.ok) {
+    //   const errorData = await response.json();
+    //   return { success: false, error: errorData.error || 'Payment processing failed' };
+    // }
+    
+    // const data = await response.json();
+    // return data;
+    
+    // For now, we'll simulate the payment processing
+    await simulateNetworkDelay(); // Simulate API call delay
+    
+    // Simulate success 90% of the time
+    const success = Math.random() < 0.9;
+    
+    if (success) {
+      return {
+        success: true,
+        transactionId: `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`
+      };
+    } else {
+      return { 
+        success: false, 
+        error: 'Payment declined by issuer' 
+      };
+    }
+  } catch (error) {
+    console.error('Payment processing error:', error);
+    return { 
+      success: false, 
+      error: 'Payment processing error' 
+    };
   }
 };
 

@@ -43,6 +43,8 @@ import { Minus, Plus, ShoppingBasket, X, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import PaymentForm from '@/components/PaymentForm';
+import { processOrderPayment, PaymentResponse } from '@/services/paymentService';
 
 interface ShippingFormValues {
   name: string;
@@ -57,6 +59,8 @@ const Cart = () => {
   const { items, updateQuantity, removeFromCart, totalItems, totalPrice, clearCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [pendingOrder, setPendingOrder] = useState<Omit<Order, 'id'> | null>(null);
   const navigate = useNavigate();
   
   const form = useForm<ShippingFormValues>({
@@ -84,29 +88,49 @@ const Cart = () => {
       return;
     }
     
-    setIsSubmitting(true);
-    try {
-      const newOrder: Omit<Order, 'id'> = {
-        date: new Date().toISOString(),
-        status: 'pending' as const,
-        items: [...items],
-        total: totalPrice,
-        shippingAddress: values
-      };
-      
-      // Now using async API call that simulates a Django backend
-      await addOrder(newOrder);
-      
-      clearCart();
-      toast.success('Order placed successfully!');
-      setIsCheckingOut(false);
-      navigate('/orders');
-    } catch (error) {
-      console.error('Failed to place order:', error);
-      toast.error('Failed to place order. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+    // Create the order but don't submit it yet
+    const newOrder: Omit<Order, 'id'> = {
+      date: new Date().toISOString(),
+      status: 'pending' as const,
+      items: [...items],
+      total: totalPrice,
+      shippingAddress: values
+    };
+    
+    // Store the pending order and show payment form
+    setPendingOrder(newOrder);
+    setShowPayment(true);
+  };
+
+  const handlePaymentComplete = async (paymentResponse: PaymentResponse) => {
+    if (!pendingOrder) return;
+    
+    if (paymentResponse.success) {
+      setIsSubmitting(true);
+      try {
+        // Now using async API call to add the order after successful payment
+        await addOrder(pendingOrder);
+        
+        clearCart();
+        toast.success('Payment successful and order placed!');
+        setIsCheckingOut(false);
+        setShowPayment(false);
+        navigate('/orders');
+      } catch (error) {
+        console.error('Failed to place order:', error);
+        toast.error('Payment was successful but order placement failed. Please contact support.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      toast.error(`Payment failed: ${paymentResponse.error}`);
     }
+  };
+
+  const handleCancelPayment = () => {
+    setShowPayment(false);
+    setPendingOrder(null);
+    toast.info('Payment cancelled');
   };
 
   if (items.length === 0) {
@@ -157,142 +181,157 @@ const Cart = () => {
               </Button>
             </SheetTrigger>
             <SheetContent className="w-full sm:max-w-lg">
-              <SheetHeader>
-                <SheetTitle>Checkout</SheetTitle>
-                <SheetDescription>
-                  Complete your order by providing your shipping information.
-                </SheetDescription>
-              </SheetHeader>
-              
-              <div className="py-6">
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(handleCheckout)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="John Doe" {...field} required />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+              {!showPayment ? (
+                <>
+                  <SheetHeader>
+                    <SheetTitle>Checkout</SheetTitle>
+                    <SheetDescription>
+                      Complete your order by providing your shipping information.
+                    </SheetDescription>
+                  </SheetHeader>
+                  
+                  <div className="py-6">
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(handleCheckout)} className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Full Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="John Doe" {...field} required />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="street"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Street Address</FormLabel>
+                              <FormControl>
+                                <Input placeholder="123 Main St" {...field} required />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="city"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>City</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Anytown" {...field} required />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="state"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>State/Province</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="CA" {...field} required />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="zip"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>ZIP/Postal Code</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="90210" {...field} required />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="country"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Country</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="USA" {...field} required />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="border-t pt-4 mt-4">
+                          <h4 className="font-medium mb-2">Order Summary</h4>
+                          <div className="space-y-1">
+                            <div className="flex justify-between">
+                              <span>Subtotal ({totalItems} items)</span>
+                              <span>${totalPrice.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Shipping</span>
+                              <span>Free</span>
+                            </div>
+                            <div className="flex justify-between font-medium pt-2 border-t">
+                              <span>Total</span>
+                              <span>${totalPrice.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-end gap-3 pt-4">
+                          <SheetClose asChild>
+                            <Button variant="outline" type="button" disabled={isSubmitting}>
+                              Cancel
+                            </Button>
+                          </SheetClose>
+                          <Button type="submit" disabled={isSubmitting}>
+                            Continue to Payment
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <SheetHeader>
+                    <SheetTitle>Payment Information</SheetTitle>
+                    <SheetDescription>
+                      Please enter your payment details to complete your order.
+                    </SheetDescription>
+                  </SheetHeader>
+                  
+                  <div className="py-6">
+                    <PaymentForm
+                      amount={totalPrice}
+                      isSubmitting={isSubmitting}
+                      onPaymentComplete={handlePaymentComplete}
+                      onCancel={handleCancelPayment}
                     />
-                    
-                    <FormField
-                      control={form.control}
-                      name="street"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Street Address</FormLabel>
-                          <FormControl>
-                            <Input placeholder="123 Main St" {...field} required />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="city"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>City</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Anytown" {...field} required />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="state"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>State/Province</FormLabel>
-                            <FormControl>
-                              <Input placeholder="CA" {...field} required />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="zip"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>ZIP/Postal Code</FormLabel>
-                            <FormControl>
-                              <Input placeholder="90210" {...field} required />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="country"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Country</FormLabel>
-                            <FormControl>
-                              <Input placeholder="USA" {...field} required />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <div className="border-t pt-4 mt-4">
-                      <h4 className="font-medium mb-2">Order Summary</h4>
-                      <div className="space-y-1">
-                        <div className="flex justify-between">
-                          <span>Subtotal ({totalItems} items)</span>
-                          <span>${totalPrice.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Shipping</span>
-                          <span>Free</span>
-                        </div>
-                        <div className="flex justify-between font-medium pt-2 border-t">
-                          <span>Total</span>
-                          <span>${totalPrice.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-end gap-3 pt-4">
-                      <SheetClose asChild>
-                        <Button variant="outline" type="button" disabled={isSubmitting}>
-                          Cancel
-                        </Button>
-                      </SheetClose>
-                      <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? (
-                          <>
-                            <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-background border-t-transparent"></div>
-                            Processing...
-                          </>
-                        ) : (
-                          <>Place Order - ${totalPrice.toFixed(2)}</>
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </div>
+                  </div>
+                </>
+              )}
             </SheetContent>
           </Sheet>
         </div>

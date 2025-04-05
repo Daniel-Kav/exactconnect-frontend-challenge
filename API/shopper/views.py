@@ -1,3 +1,4 @@
+
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth import authenticate
@@ -110,6 +111,20 @@ def order_list(request):
         # Example of creating an order from request data
         order_data = request.data
         
+        # Validate payment info if included
+        payment_info = order_data.get('paymentInfo')
+        if payment_info:
+            # In a real app, you would process the payment here
+            # with a payment gateway like Stripe or PayPal
+            # For now, we'll assume the payment was successful
+            payment_successful = True
+            
+            if not payment_successful:
+                return Response(
+                    {'error': 'Payment processing failed'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
         # Create the order
         order = Order.objects.create(
             id=order_data.get('id', f"order-{Order.objects.count() + 1}"),
@@ -156,6 +171,54 @@ def order_list(request):
             response_data['shippingAddress'] = shipping_address
             
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+@api_view(['POST'])
+def process_payment(request):
+    """
+    Process a payment for an order.
+    """
+    payment_data = request.data
+    
+    # In a real implementation, you would interact with a payment gateway here
+    # For this example, we'll simulate a successful payment
+    
+    # Validate payment data
+    required_fields = ['cardNumber', 'expiryDate', 'cvv', 'amount']
+    for field in required_fields:
+        if field not in payment_data:
+            return Response(
+                {'error': f'Missing required field: {field}'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    # Simulate payment processing
+    # In reality, you would send this data to a payment processor like Stripe
+    try:
+        # Simulate a successful payment 90% of the time
+        import random
+        success = random.random() < 0.9
+        
+        if success:
+            # Generate a transaction ID
+            import time
+            transaction_id = f"TXN{int(time.time())}{random.randint(1000, 9999)}"
+            
+            return Response({
+                'success': True,
+                'transactionId': transaction_id,
+                'message': 'Payment processed successfully'
+            })
+        else:
+            return Response({
+                'success': False,
+                'error': 'Payment declined by issuer'
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET', 'PATCH', 'DELETE'])
 def order_detail(request, pk):
