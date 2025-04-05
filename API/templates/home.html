@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopper Insight Hub - Backend</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .status {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .api-list {
+            margin: 20px 0;
+        }
+        .api-item {
+            background-color: #f8f9fa;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #3498db;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Shopper Insight Hub - Backend</h1>
+        
+        <div class="status">
+            <h3>✅ Server Status: Running</h3>
+            <p>The backend API is up and running correctly.</p>
+        </div>
+        
+        <div class="api-list">
+            <h3>Available API Endpoints:</h3>
+            <div class="api-item">/api/products/ - Product listing and details</div>
+            <div class="api-item">/api/categories/ - Product categories</div>
+            <div class="api-item">/api/orders/ - Order management</div>
+            <div class="api-item">/api/auth/login/ - User authentication</div>
+            <div class="api-item">/api/auth/signup/ - User registration</div>
+            <div class="api-item">/api/auth/profile/ - User profile</div>
+            <div class="api-item">/api/payment/ - Payment processing</div>
+        </div>
+        
+        <a href="/admin/" class="btn">Go to Admin Panel</a>
+    </div>
+</body>
+</html>
