@@ -70,12 +70,14 @@ def products_by_category(request, category):
     return Response(data)
 
 @api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def order_list(request):
     """
     List all orders or create a new order.
     """
     if request.method == 'GET':
-        orders = Order.objects.all()
+        # Only return orders belonging to the authenticated user
+        orders = Order.objects.filter(user=request.user)
         data = []
         
         for order in orders:
@@ -124,9 +126,10 @@ def order_list(request):
                     status=status.HTTP_400_BAD_REQUEST
                 )
         
-        # Create the order
+        # Create the order and associate it with the authenticated user
         order = Order.objects.create(
             id=order_data.get('id', f"order-{Order.objects.count() + 1}"),
+            user=request.user,
             status=order_data.get('status', 'pending'),
             total=order_data.get('total', 0)
         )
@@ -171,7 +174,67 @@ def order_list(request):
             
         return Response(response_data, status=status.HTTP_201_CREATED)
 
+@api_view(['GET', 'PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def order_detail(request, pk):
+    """
+    Retrieve, update or delete an order.
+    """
+    # Only allow access to orders belonging to the authenticated user
+    order = get_object_or_404(Order, pk=pk, user=request.user)
+    
+    if request.method == 'GET':
+        order_items = order.items.all()
+        items_data = [{
+            'id': item.product_id,
+            'title': item.title,
+            'price': item.price,
+            'description': item.description,
+            'category': item.category,
+            'image': item.image,
+            'rating': item.rating,
+            'quantity': item.quantity
+        } for item in order_items]
+        
+        data = {
+            'id': order.id,
+            'date': order.date.isoformat(),
+            'status': order.status,
+            'total': order.total,
+            'items': items_data
+        }
+        
+        if order.shippingAddress:
+            data['shippingAddress'] = order.shippingAddress
+            
+        return Response(data)
+    
+    elif request.method == 'PATCH':
+        # Update order status
+        order.status = request.data.get('status', order.status)
+        order.save()
+        
+        return Response({'status': 'Order status updated'})
+    
+    elif request.method == 'DELETE':
+        order.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cancel_order(request, pk):
+    """
+    Cancel an order.
+    """
+    # Only allow cancellation of orders belonging to the authenticated user
+    order = get_object_or_404(Order, pk=pk, user=request.user)
+    order.status = 'cancelled'
+    order.save()
+    
+    return Response({'status': 'Order cancelled'})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def process_payment(request):
     """
     Process a payment for an order.
@@ -218,61 +281,6 @@ def process_payment(request):
             'success': False,
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@api_view(['GET', 'PATCH', 'DELETE'])
-def order_detail(request, pk):
-    """
-    Retrieve, update or delete an order.
-    """
-    order = get_object_or_404(Order, pk=pk)
-    
-    if request.method == 'GET':
-        order_items = order.items.all()
-        items_data = [{
-            'id': item.product_id,
-            'title': item.title,
-            'price': item.price,
-            'description': item.description,
-            'category': item.category,
-            'image': item.image,
-            'rating': item.rating,
-            'quantity': item.quantity
-        } for item in order_items]
-        
-        data = {
-            'id': order.id,
-            'date': order.date.isoformat(),
-            'status': order.status,
-            'total': order.total,
-            'items': items_data
-        }
-        
-        if order.shippingAddress:
-            data['shippingAddress'] = order.shippingAddress
-            
-        return Response(data)
-    
-    elif request.method == 'PATCH':
-        # Update order status
-        order.status = request.data.get('status', order.status)
-        order.save()
-        
-        return Response({'status': 'Order status updated'})
-    
-    elif request.method == 'DELETE':
-        order.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-@api_view(['POST'])
-def cancel_order(request, pk):
-    """
-    Cancel an order.
-    """
-    order = get_object_or_404(Order, pk=pk)
-    order.status = 'cancelled'
-    order.save()
-    
-    return Response({'status': 'Order cancelled'})
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
