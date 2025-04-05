@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getProducts, getUserOrders } from '@/services/api';
@@ -10,6 +9,9 @@ import {
   Heart 
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWishlist } from '@/contexts/WishlistContext';
+import { useCart } from '@/contexts/CartContext';
+import WishlistCard from '@/components/dashboard/WishlistCard';
 import { 
   BarChart,
   Bar,
@@ -31,7 +33,10 @@ import { Badge } from '@/components/ui/badge';
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { wishlist = [] } = useWishlist();
+  const { items: cart = [] } = useCart();
   const [recentOrders, setRecentOrders] = useState([]);
+  const [totalSpent, setTotalSpent] = useState(0);
   
   // Fetch products data
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
@@ -44,10 +49,15 @@ const Dashboard = () => {
     const fetchOrders = async () => {
       try {
         const orders = await getUserOrders();
-        setRecentOrders(orders.slice(0, 3)); // Now we properly await the Promise
+        setRecentOrders(orders.slice(0, 3)); // Get the 3 most recent orders for display
+        
+        // Calculate total spent from all orders
+        const total = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+        setTotalSpent(total);
       } catch (error) {
         console.error("Error fetching orders:", error);
         setRecentOrders([]);
+        setTotalSpent(0);
       }
     };
     
@@ -100,7 +110,7 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Welcome back, {user?.name || 'there'}!</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Welcome back, {user?.fullName || 'there'}!</h2>
         <p className="text-muted-foreground">
           Here's an overview of your shopping activity and recent orders.
         </p>
@@ -113,7 +123,7 @@ const Dashboard = () => {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$1,234.56</div>
+            <div className="text-2xl font-bold">${totalSpent.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
               Lifetime purchases
             </p>
@@ -125,7 +135,7 @@ const Dashboard = () => {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{recentOrders.length}</div>
+            <div className="text-2xl font-bold">{recentOrders?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
               Total orders placed
             </p>
@@ -137,7 +147,7 @@ const Dashboard = () => {
             <Heart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{wishlist?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
               Items saved for later
             </p>
@@ -149,7 +159,7 @@ const Dashboard = () => {
             <ShoppingBag className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{cart?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
               Items in your cart
             </p>
@@ -157,8 +167,8 @@ const Dashboard = () => {
         </Card>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="col-span-1">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="col-span-1 lg:col-span-2">
           <CardHeader>
             <CardTitle>Purchase History</CardTitle>
           </CardHeader>
@@ -176,6 +186,13 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+        
+        <div className="col-span-1">
+          <WishlistCard />
+        </div>
+      </div>
+      
+      <div className="grid gap-4 md:grid-cols-2">
         <Card className="col-span-1">
           <CardHeader>
             <CardTitle>Favorite Categories</CardTitle>
@@ -204,55 +221,54 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Orders</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentOrders.length > 0 ? (
-            <div className="space-y-4">
-              {recentOrders.map((order, index) => (
-                <div key={order.id} className="flex items-center justify-between border-b pb-4 last:border-b-0 last:pb-0">
-                  <div className="space-y-1">
-                    <p className="font-medium">Order #{order.id}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={getStatusColor(order.status)}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(order.date).toLocaleDateString()}
-                      </span>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentOrders?.length > 0 ? (
+              <div className="space-y-4">
+                {recentOrders.map((order, index) => (
+                  <div key={order.id} className="flex items-center justify-between border-b pb-4 last:border-b-0 last:pb-0">
+                    <div className="space-y-1">
+                      <p className="font-medium">Order #{order.id}</p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={getStatusColor(order.status)}>
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(order.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {order.items?.length || 0} items · ${order.total.toFixed(2)}
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {order.items.length} items · ${order.total.toFixed(2)}
-                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate('/orders')}
+                    >
+                      View Details
+                    </Button>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => navigate('/orders')}
-                  >
-                    View Details
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-10">
-              <Package className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-center text-muted-foreground">You haven't placed any orders yet</p>
-              <Button 
-                className="mt-4"
-                onClick={() => navigate('/products')}
-              >
-                Start Shopping
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10">
+                <Package className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-center text-muted-foreground">You haven't placed any orders yet</p>
+                <Button 
+                  className="mt-4"
+                  onClick={() => navigate('/products')}
+                >
+                  Start Shopping
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
