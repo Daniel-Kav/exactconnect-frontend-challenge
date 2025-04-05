@@ -39,10 +39,19 @@ const Dashboard = () => {
     queryFn: getProducts,
   });
   
-  // Get orders from localStorage
+  // Get orders from API through useEffect
   useEffect(() => {
-    const orders = getUserOrders();
-    setRecentOrders(orders.slice(0, 3));
+    const fetchOrders = async () => {
+      try {
+        const orders = await getUserOrders();
+        setRecentOrders(orders.slice(0, 3)); // Now we properly await the Promise
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        setRecentOrders([]);
+      }
+    };
+    
+    fetchOrders();
   }, []);
   
   // Sample data for purchase history
