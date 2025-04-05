@@ -1,18 +1,13 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from "sonner";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+import * as authService from '../services/auth';
+import { User } from '../services/auth';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+  signup: (fullName: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -25,13 +20,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   useEffect(() => {
     // Check if user is logged in from localStorage
-    const storedUser = localStorage.getItem('user');
+    const storedUser = authService.getUser();
     if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse user from localStorage');
-      }
+      setUser(storedUser);
     }
     setIsLoading(false);
   }, []);
@@ -40,23 +31,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
-      // In a real app, this would be an API call
-      // For demo, we'll simulate a successful login for any valid email format
-      if (!email.includes('@')) {
-        throw new Error('Invalid email format');
-      }
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockUser = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: email.split('@')[0],
-        email,
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      // Call the Django backend login endpoint
+      const response = await authService.login(email, password);
+      setUser(response.user);
       toast.success('Login successful!');
     } catch (error) {
       toast.error('Login failed: ' + (error as Error).message);
@@ -66,31 +43,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signup = async (name: string, email: string, password: string) => {
+  const signup = async (fullName: string, email: string, password: string) => {
     setIsLoading(true);
     
     try {
-      // In a real app, this would be an API call
-      // For demo, we'll simulate a successful signup
-      if (!email.includes('@')) {
-        throw new Error('Invalid email format');
-      }
-      
-      if (password.length < 6) {
-        throw new Error('Password must be at least 6 characters');
-      }
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockUser = {
-        id: Math.random().toString(36).substr(2, 9),
-        name,
-        email,
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      // Call the Django backend signup endpoint
+      const response = await authService.signup(fullName, email, password);
+      setUser(response.user);
       toast.success('Account created successfully!');
     } catch (error) {
       toast.error('Signup failed: ' + (error as Error).message);
@@ -101,8 +60,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
   
   const logout = () => {
+    authService.logout();
     setUser(null);
-    localStorage.removeItem('user');
     toast.info('Logged out successfully');
   };
   
