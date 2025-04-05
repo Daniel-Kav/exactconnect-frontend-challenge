@@ -1,7 +1,7 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getProducts, getCategories } from '@/services/api';
+import ProductCard from '@/components/ProductCard';
 import { useCart } from '@/contexts/CartContext';
 import { 
   Card, 
@@ -36,7 +36,8 @@ const Products = () => {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [sortOrder, setSortOrder] = useState<string>('default');
   
-  const { addToCart } = useCart();
+  const cart = useCart();
+  const { addToCart } = cart;
   
   // Fetch products data
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
@@ -203,35 +204,9 @@ const Products = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {filteredProducts.map((product) => (
-            <Card key={product.id} className="flex flex-col overflow-hidden">
-              <div className="aspect-square relative bg-muted">
-                <img
-                  src={product.image}
-                  alt={product.title}
-                  className="object-contain w-full h-full p-4"
-                />
-              </div>
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="line-clamp-1 text-base">
-                    {product.title}
-                  </CardTitle>
-                </div>
-                <p className="text-sm text-muted-foreground">{product.category}</p>
-              </CardHeader>
-              <CardContent className="pb-2">
-                <p className="text-sm line-clamp-2 h-10">{product.description}</p>
-              </CardContent>
-              <CardFooter className="mt-auto flex items-center justify-between">
-                <span className="font-medium">${product.price.toFixed(2)}</span>
-                <Button size="sm" onClick={() => handleAddToCart(product)}>
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Add to Cart
-                </Button>
-              </CardFooter>
-            </Card>
+            <ProductCard key={product.id} product={product} />
           ))}
         </div>
       )}
