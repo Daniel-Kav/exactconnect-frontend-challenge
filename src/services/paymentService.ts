@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Order } from "@/types/Product";
 
 // Simulated card validation and processing
-interface CardDetails {
+export interface CardDetails {
   cardNumber: string;
   expiryDate: string;
   cvv: string;
