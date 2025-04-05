@@ -3,6 +3,7 @@
 
 import { toast } from "sonner";
 import { Order } from "@/types/Product";
+import { getUserOrders } from "@/services/api";
 
 // Card details for payment processing
 export interface CardDetails {
@@ -185,28 +186,63 @@ export const processOrderPayment = async (
   }
 };
 
-// Get transaction history
+// Get transaction history that matches user orders
 export const getUserTransactions = async (): Promise<Transaction[]> => {
   try {
     // Try to fetch from backend
-    const response = await fetch('/api/transactions/');
+    const response = await fetch('/api/transactions/', {
+      headers: {
+        'Authorization': `Token ${localStorage.getItem('authToken')}`,
+        'Content-Type': 'application/json'
+      }
+    });
     
     if (!response.ok) {
       // Fallback to simulated data
-      console.warn('Backend transactions API failed, returning simulated data');
-      return simulateTransactions();
+      console.warn('Backend transactions API failed, falling back to simulation');
+      return simulateTransactionsFromOrders();
     }
     
     return await response.json();
   } catch (error) {
     // If server unreachable, return simulated data
     console.warn('Backend transactions API unreachable, returning simulated data');
-    return simulateTransactions();
+    return simulateTransactionsFromOrders();
   }
 };
 
-// Simulate transactions for development
-const simulateTransactions = (): Transaction[] => {
+// Simulate transactions based on user's orders
+const simulateTransactionsFromOrders = async (): Promise<Transaction[]> => {
+  try {
+    // Get actual orders from the API
+    const orders = await getUserOrders();
+    
+    if (!orders || orders.length === 0) {
+      return generateRandomTransactions();
+    }
+    
+    const mockTransactions: Transaction[] = orders.map(order => ({
+      id: `txn-${order.id}`,
+      date: new Date(order.date).toISOString(),
+      amount: order.total,
+      status: order.status === 'cancelled' ? 'failed' : 
+             (order.status === 'pending' ? 'pending' : 'success'),
+      paymentMethod: 'Credit Card',
+      orderId: order.id
+    }));
+    
+    // Sort by date, most recent first
+    return mockTransactions.sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  } catch (error) {
+    console.error("Failed to get orders for transaction simulation:", error);
+    return generateRandomTransactions();
+  }
+};
+
+// Generate random transactions as a last resort
+const generateRandomTransactions = (): Transaction[] => {
   const mockTransactions: Transaction[] = [];
   
   // Generate some random transactions spanning last 30 days

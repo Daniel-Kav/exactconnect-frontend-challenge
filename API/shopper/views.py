@@ -368,33 +368,68 @@ def transaction_list(request):
     """
     Get a list of payment transactions for the authenticated user.
     """
-    # In a real implementation, you would retrieve transactions from a Transaction model
-    # For now, we'll return mock data based on orders with "success" payment status
-    
     # Get orders that belong to the authenticated user
     orders = Order.objects.filter(user=request.user)
     
     transactions = []
     for order in orders:
-        # Check if this order has payment information (in a real app, you'd have a proper Transaction model)
-        if hasattr(order, 'payment_status') and order.payment_status:
+        # Only include orders that have been paid for
+        if order.status != 'pending':
             transactions.append({
                 'id': f"txn-{order.id}",
                 'date': order.date.isoformat(),
                 'amount': float(order.total),
-                'status': 'success' if order.status != 'cancelled' else 'failed',
-                'paymentMethod': 'Credit Card',  # In a real app, store the actual payment method
+                'status': 'success' if order.status not in ['cancelled', 'pending'] else 
+                          ('failed' if order.status == 'cancelled' else 'pending'),
+                'paymentMethod': 'Credit Card',
                 'orderId': order.id
             })
     
-    # If you don't have any orders with payments in development, 
-    # you can uncomment this to return mock data
-    if not transactions:
-        import random
-        import time
-        from datetime import datetime, timedelta
+    # Return transactions sorted by date (most recent first)
+    transactions.sort(key=lambda x: x['date'], reverse=True)
+    
+    # If we don't have any transactions in development, provide mock data that matches orders
+    if not transactions and not Order.objects.exists():
+        # Only provide mock data if there are no orders at all in the system
+        transactions = generate_mock_transactions_with_orders()
+    
+    return Response(transactions)
+
+def generate_mock_transactions_with_orders():
+    """Helper function to generate mock transactions that match orders for development"""
+    import random
+    import time
+    from datetime import datetime, timedelta
+    
+    # First get or create mock orders to reference
+    from .models import Order
+    mock_orders = list(Order.objects.all())
+    
+    # If no orders exist, don't create transactions
+    if not mock_orders:
+        return []
+    
+    transactions = []
+    
+    # Create transactions based on actual orders
+    for order in mock_orders:
+        # Generate transaction date slightly after order date
+        order_date = order.date
+        transaction_date = order_date + timedelta(minutes=random.randint(5, 30))
         
-        for i in range(5):
+        transactions.append({
+            'id': f"txn-{order.id}",
+            'date': transaction_date.isoformat(),
+            'amount': float(order.total),
+            'status': 'success' if order.status not in ['cancelled', 'pending'] else 
+                      ('failed' if order.status == 'cancelled' else 'pending'),
+            'paymentMethod': 'Credit Card',
+            'orderId': order.id
+        })
+    
+    # If we still don't have any transactions, create a few random ones
+    if not transactions:
+        for i in range(3):
             random_days = random.randint(1, 30)
             date = datetime.now() - timedelta(days=random_days)
             
@@ -402,12 +437,11 @@ def transaction_list(request):
                 'id': f"txn-{int(time.time())}-{i}",
                 'date': date.isoformat(),
                 'amount': round(random.uniform(10, 200), 2),
-                'status': random.choice(['success', 'success', 'success', 'failed', 'pending']),
+                'status': random.choice(['success', 'success', 'failed']),
                 'paymentMethod': 'Credit Card',
-                'orderId': f"order-{int(time.time())}-{i}" if random.random() > 0.3 else None
+                'orderId': f"order-{int(time.time())}-{i}"
             })
-        
-        # Sort by date, most recent first
-        transactions.sort(key=lambda x: x['date'], reverse=True)
     
-    return Response(transactions)
+    # Sort by date (most recent first)
+    transactions.sort(key=lambda x: x['date'], reverse=True)
+    return transactions
