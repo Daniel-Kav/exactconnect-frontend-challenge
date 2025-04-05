@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from .models import Product, Order, OrderItem, User
+from .models import Product, Order, OrderItem, User, Wishlist
 
 # Sample view function for what a Product list API might look like
 @api_view(['GET'])
@@ -453,3 +453,87 @@ def generate_mock_transactions_with_orders():
     # Sort by date (most recent first)
     transactions.sort(key=lambda x: x['date'], reverse=True)
     return transactions
+
+@api_view(['GET', 'POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def wishlist(request):
+    """
+    List all wishlist items, add a new item, or clear the wishlist.
+    """
+    if request.method == 'GET':
+        # Get all wishlist items for the authenticated user
+        wishlist_items = Wishlist.objects.filter(user=request.user)
+        
+        data = [{
+            'id': item.product_id,
+            'title': item.title,
+            'price': item.price,
+            'description': item.description,
+            'category': item.category,
+            'image': item.image,
+            'dateAdded': item.date_added.isoformat()
+        } for item in wishlist_items]
+        
+        return Response(data)
+    
+    elif request.method == 'POST':
+        # Add a new item to the wishlist
+        product_data = request.data
+        
+        # Check if the product is already in the wishlist
+        existing_item = Wishlist.objects.filter(
+            user=request.user, 
+            product_id=product_data.get('id')
+        ).first()
+        
+        if existing_item:
+            return Response(
+                {'error': 'Product already in wishlist'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create a new wishlist item
+        wishlist_item = Wishlist.objects.create(
+            user=request.user,
+            product_id=product_data.get('id'),
+            title=product_data.get('title', ''),
+            price=product_data.get('price', 0),
+            description=product_data.get('description', ''),
+            category=product_data.get('category', ''),
+            image=product_data.get('image', '')
+        )
+        
+        return Response({
+            'id': wishlist_item.product_id,
+            'title': wishlist_item.title,
+            'price': wishlist_item.price,
+            'description': wishlist_item.description,
+            'category': wishlist_item.category,
+            'image': wishlist_item.image,
+            'dateAdded': wishlist_item.date_added.isoformat()
+        }, status=status.HTTP_201_CREATED)
+    
+    elif request.method == 'DELETE':
+        # Clear the entire wishlist
+        Wishlist.objects.filter(user=request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def wishlist_item(request, pk):
+    """
+    Remove a specific item from the wishlist.
+    """
+    # Check if the item exists in the user's wishlist
+    try:
+        wishlist_item = Wishlist.objects.get(user=request.user, product_id=pk)
+    except Wishlist.DoesNotExist:
+        return Response(
+            {'error': 'Item not found in wishlist'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Delete the wishlist item
+    wishlist_item.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
