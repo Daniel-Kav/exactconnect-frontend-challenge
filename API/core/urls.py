@@ -1,4 +1,3 @@
-
 """
 URL configuration for core project.
 
@@ -16,25 +15,16 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
-from shopper import views
+from django.urls import path, include
+from django.views.generic import TemplateView
+from django.shortcuts import redirect
+
+# Home page view
+def home_view(request):
+    return TemplateView.as_view(template_name='home.html')(request)
 
 urlpatterns = [
+    path('', home_view, name='home'),
     path('admin/', admin.site.urls),
-    
-    # API endpoints
-    path('api/products/', views.product_list, name='product-list'),
-    path('api/products/<int:pk>/', views.product_detail, name='product-detail'),
-    path('api/categories/', views.product_categories, name='product-categories'),
-    path('api/products/category/<str:category>/', views.products_by_category, name='products-by-category'),
-    path('api/orders/', views.order_list, name='order-list'),
-    path('api/orders/<str:pk>/', views.order_detail, name='order-detail'),
-    path('api/orders/<str:pk>/cancel/', views.cancel_order, name='cancel-order'),
-    path('api/payment/', views.process_payment, name='process-payment'),
-    path('api/transactions/', views.transaction_list, name='transaction-list'),
-    
-    # Authentication endpoints
-    path('api/auth/signup/', views.user_signup, name='user-signup'),
-    path('api/auth/login/', views.user_login, name='user-login'),
-    path('api/auth/profile/', views.user_profile, name='user-profile'),
+    path('api/', include('shopper.urls')),
 ]
