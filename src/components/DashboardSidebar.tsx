@@ -1,7 +1,7 @@
 
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
-import { ShoppingCart, BarChart, ListOrdered, LayoutDashboard, Settings } from "lucide-react";
+import { ShoppingCart, BarChart, ListOrdered, LayoutDashboard, Settings, CreditCard } from "lucide-react";
 import Logo from "./Logo";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -48,6 +48,11 @@ const DashboardSidebar = () => {
       icon: <ListOrdered className="h-5 w-5" />,
       label: "Orders",
       href: "/orders",
+    },
+    {
+      icon: <CreditCard className="h-5 w-5" />,
+      label: "Transactions",
+      href: "/transactions",
     },
     {
       icon: <BarChart className="h-5 w-5" />,
