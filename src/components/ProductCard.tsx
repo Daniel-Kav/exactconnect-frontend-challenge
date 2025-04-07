@@ -23,7 +23,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   
   return (
     <Card className="overflow-hidden h-full flex flex-col">
-      <Link to={`/products/${product.id}`} className="flex-grow flex flex-col">
+      {/* <Link to={`/products/${product.id}`} className="flex-grow flex flex-col"> */}
         <div className="relative pt-[100%] bg-gray-100">
           <img 
             src={product.image} 
@@ -42,7 +42,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <p className="text-gray-500 text-sm mb-2">{product.category}</p>
           <p className="font-bold text-lg">{formatCurrency(product.price)}</p>
         </CardContent>
-      </Link>
+      {/* </Link> */}
       
       <CardFooter className="p-4 pt-0">
         <Button 
