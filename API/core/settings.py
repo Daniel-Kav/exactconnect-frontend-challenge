@@ -41,6 +41,7 @@ CSRF_TRUSTED_ORIGINS = ['https://shopper-hub-9avf.onrender.com',
 # Application definition
 
 INSTALLED_APPS = [
+    'shopper',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -50,7 +51,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
-    'shopper',
+    
 ]
 
 MIDDLEWARE = [
