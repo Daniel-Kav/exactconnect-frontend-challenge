@@ -88,11 +88,11 @@ const DashboardSidebar = () => {
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 rounded-full bg-brand-pink flex items-center justify-center">
             <span className="text-md font-semibold text-brand-red">
-              {user?.name?.[0]?.toUpperCase() || "U"}
+              {user?.fullName?.[0]?.toUpperCase() || "U"}
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold">{user?.name || "User"}</span>
+            <span className="text-sm font-semibold">{user?.fullName || "User"}</span>
             <span className="text-xs text-muted-foreground">{user?.email || "user@example.com"}</span>
           </div>
         </div>

@@ -62,7 +62,7 @@ const Settings = () => {
   const profileForm = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: user?.name || '',
+      name: user?.fullName || '',
       email: user?.email || '',
     },
   });
@@ -128,7 +128,7 @@ const Settings = () => {
                   <div className="flex items-center space-x-4">
                     <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
                       <span className="text-lg font-medium">
-                        {user?.name?.[0]?.toUpperCase() || "U"}
+                        {user?.fullName?.[0]?.toUpperCase() || "U"}
                       </span>
                     </div>
                     <div>

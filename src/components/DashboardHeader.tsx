@@ -78,11 +78,11 @@ const DashboardHeader = () => {
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-brand-pink flex items-center justify-center">
               <span className="text-md font-semibold text-brand-red">
-                {user?.name?.[0]?.toUpperCase() || "U"}
+                {user?.fullName?.[0]?.toUpperCase() || "U"}
               </span>
             </div>
             <div>
-              <p className="text-sm font-medium">{user?.name || "User"}</p>
+              <p className="text-sm font-medium">{user?.fullName || "User"}</p>
               <p className="text-xs text-muted-foreground">{user?.email || "user@example.com"}</p>
             </div>
           </div>
@@ -162,7 +162,7 @@ const DashboardHeader = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="py-2">
-              <p className="text-sm font-semibold">{user?.name || "User"}</p>
+              <p className="text-sm font-semibold">{user?.fullName || "User"}</p>
               <p className="text-xs font-normal text-muted-foreground mt-0.5">
                 {user?.email || "user@example.com"}
               </p>
