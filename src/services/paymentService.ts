@@ -225,8 +225,7 @@ const simulateTransactionsFromOrders = async (): Promise<Transaction[]> => {
       id: `txn-${order.id}`,
       date: new Date(order.date).toISOString(),
       amount: order.total,
-      status: order.status === 'cancelled' ? 'failed' : 
-             (order.status === 'pending' ? 'pending' : 'success'),
+      status: 'success', // Always set status to success
       paymentMethod: 'Credit Card',
       orderId: order.id
     }));
@@ -255,7 +254,7 @@ const generateRandomTransactions = (): Transaction[] => {
       id: `txn-${Date.now()}-${i}`,
       date: date.toISOString(),
       amount: Math.floor(Math.random() * 30000) / 100, // Random amount between $0-$300
-      status: Math.random() < 0.9 ? 'success' : (Math.random() < 0.5 ? 'failed' : 'pending'),
+      status: 'success', // Always set status to success
       paymentMethod: 'Credit Card',
       orderId: `order-${Date.now()}-${i}`
     });
