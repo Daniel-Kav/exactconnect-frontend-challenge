@@ -253,8 +253,8 @@ const generateRandomTransactions = (): Transaction[] => {
     mockTransactions.push({
       id: `txn-${Date.now()}-${i}`,
       date: date.toISOString(),
-      amount: Math.floor(Math.random() * 30000) / 100, // Random amount between $0-$300
-      status: 'success', // Always set status to success
+      amount: Math.floor(Math.random() * 30000) / 100, 
+      status: 'success', 
       paymentMethod: 'Credit Card',
       orderId: `order-${Date.now()}-${i}`
     });
