@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ShoppingCart } from 'lucide-react';
+import { PieChart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface LogoProps {
@@ -10,8 +10,8 @@ interface LogoProps {
 const Logo: React.FC<LogoProps> = ({ className = '' }) => {
   return (
     <Link to="/dashboard" className={`flex items-center gap-3 ${className}`}>
-      <ShoppingCart className="h-7 w-7 text-brand-red" />
-      <span className="font-bold text-xl text-brand-red">ShopperHub</span>
+      <PieChart className="h-7 w-7 text-brand-red" />
+      <span className="font-bold text-xl text-brand-red">Exactconnect</span>
     </Link>
   );
 };
