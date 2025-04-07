@@ -42,7 +42,7 @@ const Signup = () => {
     <div className="min-h-screen flex items-center justify-center bg-dashboard-gradient p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-brand-red">Shopper Insight Hub</h1>
+          <h1 className="text-2xl font-bold text-brand-red">Exactconnect</h1>
           <p className="text-gray-600">Create your account to get started</p>
         </div>
         
