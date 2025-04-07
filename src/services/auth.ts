@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 
 // API URLs
-const API_BASE_URL = 'http://localhost:8000'; // Update with your Django server URL
+const API_BASE_URL = 'https://shopper-hub-9avf.onrender.com'; // Update with your Django server URL
 const AUTH_ENDPOINTS = {
   signup: '/api/auth/signup/',
   login: '/api/auth/login/',
