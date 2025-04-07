@@ -4,10 +4,12 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import DashboardHeader from "@/components/DashboardHeader";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const DashboardLayout = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     // If not loading and not authenticated, redirect to login
@@ -32,7 +34,7 @@ const DashboardLayout = () => {
 
   return (
     <div className="flex h-screen bg-background">
-      <DashboardSidebar />
+      {!isMobile && <DashboardSidebar />}
       <div className="flex flex-1 flex-col lg:pl-72">
         <DashboardHeader />
         <main className="flex-1 overflow-y-auto p-6 md:p-8">

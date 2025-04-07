@@ -15,6 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer"; 
+import { useIsMobile } from "@/hooks/use-mobile";
 import Logo from "./Logo";
 import DashboardSidebar from "./DashboardSidebar";
 
@@ -23,26 +25,104 @@ const DashboardHeader = () => {
   const { totalItems } = useCart();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  const MobileNav = () => (
+    <div className="w-full h-full flex flex-col">
+      <div className="flex items-center justify-between p-4 border-b">
+        <Logo className="scale-110" />
+      </div>
+      <div className="flex-1 overflow-auto">
+        <nav className="grid gap-2 p-4">
+          <Button variant="ghost" className="justify-start" onClick={() => { navigate('/dashboard'); setIsMobileMenuOpen(false); }}>
+            <span className="sr-only">Dashboard</span>
+            Dashboard
+          </Button>
+          <Button variant="ghost" className="justify-start" onClick={() => { navigate('/products'); setIsMobileMenuOpen(false); }}>
+            <span className="sr-only">Products</span>
+            Products
+          </Button>
+          <Button variant="ghost" className="justify-start" onClick={() => { navigate('/orders'); setIsMobileMenuOpen(false); }}>
+            <span className="sr-only">Orders</span>
+            Orders
+          </Button>
+          <Button variant="ghost" className="justify-start" onClick={() => { navigate('/transactions'); setIsMobileMenuOpen(false); }}>
+            <span className="sr-only">Transactions</span>
+            Transactions
+          </Button>
+          <Button variant="ghost" className="justify-start" onClick={() => { navigate('/reports'); setIsMobileMenuOpen(false); }}>
+            <span className="sr-only">Reports</span>
+            Reports
+          </Button>
+          <Button variant="ghost" className="justify-start" onClick={() => { navigate('/settings'); setIsMobileMenuOpen(false); }}>
+            <span className="sr-only">Settings</span>
+            Settings
+          </Button>
+          <Button variant="ghost" className="justify-start" onClick={() => { navigate('/cart'); setIsMobileMenuOpen(false); }}>
+            <span className="sr-only">Cart</span>
+            Cart
+          </Button>
+          <Button variant="ghost" className="justify-start" onClick={() => { navigate('/wishlist'); setIsMobileMenuOpen(false); }}>
+            <span className="sr-only">Wishlist</span>
+            Wishlist
+          </Button>
+        </nav>
+      </div>
+      <div className="border-t p-4">
+        <div className="flex flex-col space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-brand-pink flex items-center justify-center">
+              <span className="text-md font-semibold text-brand-red">
+                {user?.name?.[0]?.toUpperCase() || "U"}
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-medium">{user?.name || "User"}</p>
+              <p className="text-xs text-muted-foreground">{user?.email || "user@example.com"}</p>
+            </div>
+          </div>
+          <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Log out
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <header className="sticky top-0 z-30 flex h-20 items-center gap-6 border-b bg-background px-6 sm:px-8">
       <div className="lg:hidden">
-        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="lg:hidden h-12 w-12">
-              <Menu className="h-6 w-6" />
-              <span className="sr-only">Toggle menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0">
-            <DashboardSidebar />
-          </SheetContent>
-        </Sheet>
+        {isMobile ? (
+          <Drawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <DrawerTrigger asChild>
+              <Button variant="outline" size="icon" className="h-12 w-12">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent className="h-[80vh]">
+              <MobileNav />
+            </DrawerContent>
+          </Drawer>
+        ) : (
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" className="h-12 w-12">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0">
+              <MobileNav />
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
       <div className="lg:hidden">
         <Logo className="scale-110" />
