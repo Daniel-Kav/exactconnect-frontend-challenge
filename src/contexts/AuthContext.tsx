@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from "sonner";
 import * as authService from '../services/auth';
@@ -32,6 +31,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
+      // Check if user is already logged in
+      if (user) {
+        toast.error('You are already logged in. Please logout first.');
+        throw new Error('User already logged in');
+      }
+
       // Call the Django backend login endpoint
       const response = await authService.login(email, password);
       setUser(response.user);
