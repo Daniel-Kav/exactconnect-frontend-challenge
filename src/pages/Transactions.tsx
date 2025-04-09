@@ -77,7 +77,7 @@ const Transactions = () => {
       case 'success':
         return 'bg-green-100 text-green-800';
       case 'failed':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-700';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       default:
