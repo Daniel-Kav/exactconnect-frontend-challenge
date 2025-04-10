@@ -34,7 +34,6 @@ const getAuthHeaders = () => {
 
 // Format data from Django-like format (when you replace the API)
 const formatFromDjango = (data: any): any => {
-  // This function can be updated to transform Django API responses to match your frontend models
   return data;
 };
 
